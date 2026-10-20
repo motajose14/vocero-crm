@@ -97,9 +97,14 @@ En la aplicación normal, el pie del menú lateral etiqueta a la cuenta según l
 «Superadmin» cuando el flag está encendido y «Propietario» o «Equipo» según su rol en la
 organización; el flag gana al rol, porque una misma persona puede ser dueña de su cliente
 y, además, administrar la instancia. Con el flag aparece, en su propio grupo «Plataforma»
-al final del menú, el enlace «Panel de plataforma» a `/admin`; sin él no se enseña ni se
-cuenta que el panel existe. El enlace no amplía la llave: `/admin` y `/api/admin/*`
-vuelven a preguntar el flag en el servidor.
+al final del menú, el enlace «Clientes» (la lista de organizaciones) y el enlace «Planes»;
+sin él no se enseña ni se cuenta que el panel existe. El enlace no amplía la llave:
+`/admin` y `/api/admin/*` vuelven a preguntar el flag en el servidor.
+
+El panel no tiene cascarón propio: vive dentro del mismo shell que el resto del CRM
+(route group `(app)`, que no agrega URL), de modo que el menú lateral permanece al
+navegar entre Bandeja y Planes. Quien administra la instancia no debe saltar de la
+aplicación a algo visualmente ajeno para hacer su trabajo.
 
 ### Historia 3 — Planes con Free (P1)
 

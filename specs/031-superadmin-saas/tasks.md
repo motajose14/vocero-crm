@@ -60,3 +60,12 @@
   propio id para pintar; `withAdmin`, `usageByOrg` y las altas siguen confinadas en
   `/api/admin/*`. `nav.test.ts` RED→GREEN (+2: grupo Plataforma y `rolLabel`).
   Cuatro gates en verde (typecheck, lint, suite 108/1221, build). Specs: Historia 2.
+- [x] **T10** — Panel integrado en el CRM (L20-L21): `git mv src/app/admin
+  "src/app/(app)/admin"` y se borró `admin-nav.tsx` y el header propio. El route group
+  `(app)` no agrega URL — las rutas siguen `/admin`, `/admin/clientes`,
+  `/admin/clientes/[id]`, `/admin/planes`, verificado en el manifest del build — pero
+  ahora las envuelve el mismo shell (sidebar) que al resto del CRM. El layout queda SOLO
+  con la guarda + header «Plataforma» al estilo de Ajustes. El menú pasa de un enlace
+  genérico a dos entradas: «Clientes» (lista de organizaciones) y «Planes».
+  `nav.test.ts` RED→GREEN (los dos hrefs); guardarraíl actualizado con la nueva ruta.
+  Docs (AGENTS.md, plan.md, spec.md). Cuatro gates en verde.

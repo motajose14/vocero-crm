@@ -58,21 +58,28 @@ describe("barra lateral agrupada", () => {
     for (const item of [...todos, SETTINGS_ITEM]) expect(item.icon).toBeDefined();
   });
 
-  it("031 — el superadmin ve Panel de plataforma; una org normal, nunca", () => {
+  it("031 — el superadmin ve Clientes y Planes; una org normal, nunca", () => {
     // Sin el flag, ningún grupo menciona /admin: un dueño de cliente ni siquiera
     // sabe que el panel existe.
     for (const role of ["owner", "member", null, undefined]) {
       const hrefs = appNavGroups({ role }).flatMap((g) => g.items).map((i) => i.href);
-      expect(hrefs).not.toContain("/admin");
+      expect(hrefs).not.toContain("/admin/clientes");
+      expect(hrefs).not.toContain("/admin/planes");
     }
-    // Con el flag, el enlace va en su propio grupo al final: administrar la
-    // instancia no es el trabajo del día de nadie.
+    // Con el flag, van en su propio grupo al final: administrar la instancia
+    // no es el trabajo del día de nadie. Dos pantallas y no un «Panel» con
+    // submenú: se visitan seguido y esconder Planes tras otro nivel solo las
+    // hace más lentas de alcanzar.
     const grupos = appNavGroups({ role: "owner", superadmin: true });
     expect(grupos.at(-1)).toMatchObject({ title: "Plataforma" });
-    expect(grupos.at(-1)!.items[0]).toMatchObject({
-      href: "/admin",
-      label: "Panel de plataforma",
-    });
+    expect(grupos.at(-1)!.items.map((i) => i.label)).toEqual([
+      "Clientes",
+      "Planes",
+    ]);
+    expect(grupos.at(-1)!.items.map((i) => i.href)).toEqual([
+      "/admin/clientes",
+      "/admin/planes",
+    ]);
     // El resto del menú no cambia: el superadmin sigue viendo su CRM.
     expect(labels(grupos.slice(0, 3))).toEqual(labels(appNavGroups({ role: "owner" })));
   });

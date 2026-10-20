@@ -74,14 +74,19 @@ const SUPERADMIN_PERMITIDO =
   // `withAdmin` vive aquí y es quien consulta el flag en el camino feliz;
   // el test siguiente fija que SOLO las rutas admin usen `withAdmin`, así
   // que el conjunto de las dos reglas deja el permiso confinado.
-  // El panel es el segmento NORMAL `app/admin/` (no un route group): un
-  // `(admin)` no agrega URL y el panel quedaría en `/clientes` y `/planes`,
-  // fuera de su prefijo. El arnés e2e lo atrapó con un 404 en `/admin`.
-  // `app/(app)/layout.tsx` es la ÚNICA excepción: lee el flag para pintar
-  // "Superadmin" y el enlace al panel en el menú lateral. No actúa con esa
-  // autoridad — los tests siguientes siguen fijando que `withAdmin`,
-  // `usageByOrg` y las altas no salen de `/api/admin/*`.
-  /^lib\/api\.ts$|^app\/api\/admin\/|^app\/admin\/|^app\/\(app\)\/layout\.tsx$/;
+  //
+  // El panel vive en el route group `app/(app)/admin/`: el grupo NO agrega
+  // URL, así que las rutas siguen siendo `/admin`, `/admin/clientes` y
+  // `/admin/planes`, pero el cascarón del CRM (sidebar incluido) las envuelve
+  // como a cualquier otra pantalla. Esa es la otra cara de la lección de T8:
+  // un route group no cambia la URL — allí eso rompió el prefijo, aquí es lo
+  // que permite reusar el shell sin duplicarlo.
+  //
+  // `app/(app)/layout.tsx` es la ÚNICA excepción fuera de la puerta: lee el
+  // flag para pintar "Superadmin" y el grupo Plataforma en el menú lateral.
+  // No actúa con esa autoridad — los tests siguientes siguen fijando que
+  // `withAdmin`, `usageByOrg` y las altas no salen de `/api/admin/*`.
+  /^lib\/api\.ts$|^app\/\(app\)\/admin\/|^app\/\(app\)\/layout\.tsx$/;
 
 describe("guardarraíl: el superadmin es la única puerta cross-org", () => {
   it("`esSuperadmin` solo lo leen la puerta de plataforma y el layout de la app", () => {

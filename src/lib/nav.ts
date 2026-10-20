@@ -1,12 +1,13 @@
 import {
+  Building2,
   CalendarDays,
   ChartColumn,
   FlaskConical,
   Inbox,
   Kanban,
+  Layers,
   ListChecks,
   Settings,
-  ShieldCheck,
   Sparkles,
   Users,
   type LucideIcon,
@@ -87,13 +88,18 @@ export function appNavGroups({
   ];
 
   // 031 — Administrar la instancia no es una actividad del negocio de nadie:
-  // va en su propio grupo, al final, y solo quien tiene el flag lo ve. Que el
-  // enlace exista no amplía la llave: `/admin` y `/api/admin/*` siguen
-  // preguntando por `is_superadmin` en el servidor.
+  // va en su propio grupo, al final, y solo quien tiene el flag lo ve. Son dos
+  // entradas y no un «Panel» con submenú: son dos pantallas que se visitan
+  // seguido, y esconder Planes detrás de un nivel más es hacerlo más lento de
+  // alcanzar. Que el enlace exista no amplía la llave: `/admin` y
+  // `/api/admin/*` siguen preguntando por `is_superadmin` en el servidor.
   if (superadmin) {
     grupos.push({
       title: "Plataforma",
-      items: [{ href: "/admin", label: "Panel de plataforma", icon: ShieldCheck }],
+      items: [
+        { href: "/admin/clientes", label: "Clientes", icon: Building2 },
+        { href: "/admin/planes", label: "Planes", icon: Layers },
+      ],
     });
   }
 
