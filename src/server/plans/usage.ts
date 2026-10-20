@@ -1,4 +1,5 @@
-import { eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 
@@ -110,4 +111,88 @@ export async function orgUsage(
       countConversationsMonth(db, orgId, now),
     ]);
   return { contacts, members, channels, conversationsThisMonth };
+}
+
+/**
+ * 031 — Uso de VARIAS organizaciones de una vez (lista del superadmin).
+ *
+ * Cuatro consultas agrupadas en vez de cuatro por cliente: con cientos de
+ * organizaciones la diferencia es la diferencia entre una pantalla ágil y una
+ * que no carga. Los ids fuera de `orgIds` simplemente no aparecen.
+ *
+ * ATENCIÓN: es el ÚNICO lector de estas tablas sin `scoped()` — la lista de
+ * plataforma existe para ver a todos los clientes. Vive aquí, en el módulo de
+ * planes, para que ninguna ruta de dominio lo imite.
+ */
+export async function usageByOrg(
+  db: Db,
+  orgIds: string[],
+  now = new Date()
+): Promise<Record<string, Usage>> {
+  const vacio: Record<string, Usage> = {};
+  if (orgIds.length === 0) return vacio;
+
+  // Tabla con su columna de tenant: el tipo base `PgTable` ya no arrastra el
+  // nombre de tabla, que es lo que hacía incompatible a unas con otras.
+  type TablaOrg = PgTable & { organizationId: PgColumn };
+
+  const grupos = async (tabla: TablaOrg) =>
+    db
+      .select({
+        orgId: tabla.organizationId,
+        n: sql<number>`count(*)::int`,
+      })
+      .from(tabla)
+      .where(inArray(tabla.organizationId, orgIds))
+      .groupBy(tabla.organizationId);
+
+  // La columna base tipa `orgId` como `unknown` (el genérico de PgColumn está
+  // vacío): el valor siempre es el id de texto de la tabla, nunca un número.
+  const porOrg = (filas: { orgId: unknown; n: number }[]) => {
+    const mapa: Record<string, number> = {};
+    for (const fila of filas) mapa[String(fila.orgId)] = fila.n;
+    return mapa;
+  };
+
+  const [contactos, miembros, conversaciones, wa, ig, ms, tt] =
+    await Promise.all([
+      grupos(schema.contact),
+      grupos(schema.member),
+      db
+        .select({
+          orgId: schema.conversation.organizationId,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(schema.conversation)
+        .where(
+          and(
+            inArray(schema.conversation.organizationId, orgIds),
+            eq(schema.conversation.isTest, false),
+            gte(schema.conversation.createdAt, startOfMonthUtc(now))
+          )
+        )
+        .groupBy(schema.conversation.organizationId),
+      grupos(schema.metaCredentials),
+      grupos(schema.instagramCredentials),
+      grupos(schema.messengerCredentials),
+      grupos(schema.tiktokCredentials),
+    ]);
+
+  const c = porOrg(contactos);
+  const m = porOrg(miembros);
+  const v = porOrg(conversaciones);
+  // Cada canal aporta 1 si tiene credenciales guardadas (misma regla que
+  // countChannels: un canal repetido en varias tablas no suma dos veces).
+  const porCanal = [wa, ig, ms, tt].map(porOrg);
+
+  const salida: Record<string, Usage> = {};
+  for (const orgId of orgIds) {
+    salida[orgId] = {
+      contacts: c[orgId] ?? 0,
+      members: m[orgId] ?? 0,
+      channels: porCanal.filter((mapa) => (mapa[orgId] ?? 0) > 0).length,
+      conversationsThisMonth: v[orgId] ?? 0,
+    };
+  }
+  return salida;
 }

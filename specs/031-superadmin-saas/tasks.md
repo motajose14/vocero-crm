@@ -19,8 +19,14 @@
   con plan Free (`ensureFreePlan`), bypass interno intacto (no crea org);
   `tests/unit/on-signup.test.ts` RED→GREEN (5) y `registration.test.ts` sigue en verde
   (el gate `ALLOW_SIGNUP` no cambia). Specs: S4.
-- [ ] **T5** — Superadmin: flag, `requireSuperadmin`, `scripts/superadmin-grant.mjs`,
-  API `/api/admin/*` (organizaciones + planes CRUD) + pruebas. Specs: S1, S2, S5.
+- [x] **T5** — Superadmin: flag `user.is_superadmin` + `esSuperadmin`, guarda
+  `withAdmin` (401 → 403 `forbidden` sin ejecutar el handler), esquemas Zod de
+  `/api/admin/*`, `GET/POST /api/admin/plans`, `PATCH/DELETE .../plans/[planId]`
+  (409 `plan_in_use`), `GET/POST /api/admin/organizations` (alta con contraseña
+  aleatoria devuelta una vez), `GET/PATCH .../organizations/[orgId]`,
+  `usageByOrg` agrupado y `scripts/superadmin-grant.mjs` (`pnpm superadmin:grant`);
+  `admin-guard-schemas.test.ts` (9) + `admin-routes.test.ts` (16) RED→GREEN.
+  Specs: S1, S2, S5.
 - [ ] **T6** — Límites en sus puertas (contactos, import, equipo, canales), conversación
   sobre cuota con `plan_blocked`, guarda de envío con desbloqueo perezoso, sin turno de
   IA en bloqueadas + pruebas. Specs: S3, Historias 4-5.

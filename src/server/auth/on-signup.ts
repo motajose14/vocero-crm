@@ -34,8 +34,27 @@ export async function onUserCreated(
   const db = getDb();
   // Fuera de la transacción: idempotente a prueba de carreras por sí solo.
   const planId = await ensureFreePlan(db);
-  const orgId = newId("organization");
   const name = userName ? `Negocio de ${userName}` : "Mi negocio";
+
+  await crearOrgConDueño({ userId, name, planId });
+}
+
+/**
+ * 031 — Crea una organización completa con su dueño: pipeline sembrado, perfil
+ * del agente y membresía `owner`. La comparten el registro público (con el
+ * plan Free) y el alta manual del superadmin (con el plan que elija).
+ *
+ * Sale con el id de la organización para que el llamador haga lo que necesite
+ * con ella (asignar plan posterior, devolverla en la API…).
+ */
+export async function crearOrgConDueño(input: {
+  userId: string;
+  name: string;
+  planId: string | null;
+}): Promise<string> {
+  const db = getDb();
+  const orgId = newId("organization");
+  const { userId, name, planId } = input;
 
   await db.transaction(async (tx) => {
     await tx.insert(schema.organization).values({
@@ -64,6 +83,8 @@ export async function onUserCreated(
       organizationId: orgId,
     });
   });
+
+  return orgId;
 }
 
 /**

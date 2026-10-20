@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireSession, UnauthorizedError, type SessionContext } from "@/lib/auth/session";
+import { esSuperadmin } from "@/lib/auth/superadmin";
 
 /** Respuesta de error estándar de la API interna (contrato api.md). */
 export function apiError(
@@ -34,6 +35,23 @@ export function withAuth<Args extends unknown[]>(
       return apiError(500, "internal", "Error interno");
     }
   };
+}
+
+/**
+ * Envuelve un route handler de `/api/admin/*`: sesión primero (401 igual que
+ * `withAuth`) y después el flag de plataforma, que si no está → 403
+ * `forbidden` SIN ejecutar el handler. Barato en el camino feliz: solo consulta
+ * la columna `is_superadmin` del usuario.
+ */
+export function withAdmin<Args extends unknown[]>(
+  handler: (session: SessionContext, ...args: Args) => Promise<Response>
+): (...args: Args) => Promise<Response> {
+  return withAuth(async (session, ...args) => {
+    if (!(await esSuperadmin(session.userId))) {
+      return apiError(403, "forbidden", "Requiere permiso de superadmin");
+    }
+    return handler(session, ...args);
+  });
 }
 
 /** Parsea el body JSON con un esquema Zod; inválido → Response 422. */
