@@ -4,12 +4,13 @@
 > commits). Ruta: todas `inline` — el padre del ODD escribe siguiendo su logbook; no hay
 > unidades paralelas con superficies disjuntas.
 
-- [ ] **T1** — Enmendar la Constitución (Principio VIII `:233-235`, intro `:55-57`,
+- [x] **T1** — Enmendar la Constitución (Principio VIII `:233-235`, intro `:55-57`,
   Principio III `:126-129`) y escribir `specs/031-superadmin-saas/{spec,plan,tasks}.md`.
-  Specs: todas (habilita el resto).
-- [ ] **T2** — Esquema: tabla `plan`, `organization.plan_id`, `user.is_superadmin`,
-  `conversation.plan_blocked`; `pnpm db:generate` → `drizzle/0021_*` con Free sembrado.
-  Specs: S2, S3, S5.
+  Specs: todas (habilita el resto). Commit `e4c269e`.
+- [x] **T2** — Esquema: tabla `plan`, `organization.plan_id`, `user.is_superadmin`,
+  `conversation.plan_blocked`; `pnpm db:generate` → `drizzle/0021_*` (solo DDL; el Free
+  lo asegura `ensureFreePlan()` en runtime). Prueba RED→GREEN: `tests/unit/plan-schema.test.ts`.
+  Suite 1150/1150 + typecheck en verde. Specs: S2, S3, S5.
 - [ ] **T3** — `src/server/plans/` (`limits.ts`, `usage.ts`, `guards.ts`, `blocked.ts`) +
   pruebas unitarias. Specs: S3.
 - [ ] **T4** — Registro multi-tenant: registro abierto, organización por registro con

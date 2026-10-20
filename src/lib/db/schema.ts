@@ -30,6 +30,11 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /**
+   * 031 — superadmin de plataforma: maneja clientes (organizaciones) y planes
+   * desde /admin, fuera de toda organización. No es un rol de member.
+   */
+  isSuperadmin: boolean("is_superadmin").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -75,11 +80,35 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+/**
+ * 031 — Superadmin SaaS: plan de un cliente. Cada límite es un entero o null
+ * (= sin límite); `organization.plan_id NULL` también significa sin límites,
+ * para no capar instalaciones existentes al actualizar.
+ */
+export const plan = pgTable("plan", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  /** Marcador del plan de entrada gratuito (el «Free» sembrado en runtime). */
+  isFree: boolean("is_free").notNull().default(false),
+  /** Precio mensual de exhibición en centavos; sin cobros (etapa 2: billing). */
+  priceCents: integer("price_cents"),
+  maxContacts: integer("max_contacts"),
+  maxMembers: integer("max_members"),
+  maxChannels: integer("max_channels"),
+  maxConversationsMonth: integer("max_conversations_month"),
+  /** Los planes desactivados no se asignan a clientes nuevos. */
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const organization = pgTable("organization", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").unique(),
   logo: text("logo"),
+  /** 031 — plan asignado; null = sin límites (sin plan, p. ej. al actualizar). */
+  planId: text("plan_id").references(() => plan.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
 });
@@ -374,6 +403,14 @@ export const conversation = pgTable(
      */
     channelThreadRef: text("channel_thread_ref"),
     aiEnabled: boolean("ai_enabled").notNull().default(true),
+    /**
+     * 031 — nació sobre los límites del plan: el mensaje entrante entra, pero
+     * ni el agente de IA ni una persona responden (409 plan_limit en el
+     * envío). Se libera de forma perezosa en el primer envío posterior si la
+     * organización ya está dentro de límites (plan nuevo, mes nuevo o
+     * contactos por debajo del tope).
+     */
+    planBlocked: boolean("plan_blocked").notNull().default(false),
     handoffAt: timestamp("handoff_at"),
     handoffReason: text("handoff_reason", {
       // 008: manual_reply = el dueño respondió desde la app del teléfono.

@@ -30,7 +30,9 @@ plan.
   en «Comportamiento observable».)
 - **D5 — `organization.plan_id NULL` = sin límites.** Las instalaciones existentes que
   actualicen no quedan capadas de golpe; el superadmin asigna planes a mano. Las altas
-  por registro público del SaaS reciben el plan Free sembrado por la migración. (L9.)
+  por registro público del SaaS reciben el plan Free, asegurado en runtime por
+  `ensureFreePlan()` (la migración es solo DDL: `drizzle/` se genera, nunca se edita a
+  mano). (L9, L12.)
 - **D6 — Bloqueo perezoso, sin cron**: `conversation.plan_blocked` se limpia en el
   primer envío cuando la organización actualmente está dentro de límites (plan nuevo, mes
   nuevo o contactos por debajo del tope). (L9.)
@@ -45,8 +47,8 @@ plan.
 **Dentro**
 
 - Tablas `plan` y `organization.plan_id`; columnas `user.is_superadmin` y
-  `conversation.plan_blocked`; migración `drizzle/0021_*` (aditiva, siembra el plan
-  «Free»).
+  `conversation.plan_blocked`; migración `drizzle/0021_*` (aditiva, solo DDL). El plan
+  «Free» lo asegura `ensureFreePlan()` en runtime, no la migración.
 - Módulo `src/server/plans/` con los límites efectivos de una organización, sus
   contadores y la guarda de bloqueo.
 - Registro público abierto: cada registro crea la SUYA organización con plan Free.
@@ -91,7 +93,8 @@ usuario sin ese flag, `/admin` y `/api/admin/*` responden 401/403 y `/admin` red
 Dado el superadmin en Pantalla → Planes, cuando crea o edita un plan entonces define
 nombre, marcador «Free», precio mensual de exhibición y los cuatro límites (vacío =
 sin límite); puede desactivarlo. Si intenta borrar un plan con clientes asignados recibe
-409 `plan_in_use`. La migración siembra un plan «Free» editable.
+409 `plan_in_use`. Existe siempre un plan «Free» editable (asegurado de forma
+idempotente en runtime, ya que `drizzle/` se genera y nunca se edita a mano).
 
 ### Historia 4 — Límites duros en la puerta (P1)
 

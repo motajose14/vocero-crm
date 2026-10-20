@@ -24,7 +24,7 @@ src/server/plans/
 | `organization.plan_id` | text null → FK `plan` (sin cascade: borrar plan asignado se rechaza en la app, 409 `plan_in_use`) |
 | `user.is_superadmin` | bool not null default false (flag de plataforma, independiente de `member.role`) |
 | `conversation.plan_blocked` | bool not null default false |
-| siembra | `INSERT` del plan «Free» (`slug='free'`, `is_free=true`, límites por defecto) con `ON CONFLICT DO NOTHING` (re-ejecutable) |
+| Free idempotente en runtime | `ensureFreePlan()` en `src/server/plans/free.ts`: `INSERT … ON CONFLICT (slug) DO NOTHING` (`slug='free'`, `is_free=true`, límites por defecto), llamado en el alta por registro y en la API de planes. `drizzle/` se genera, nunca se edita a mano: la migración 0021 es solo DDL. |
 
 Límites por defecto del Free (editables por el superadmin): 100 contactos, 2 miembros,
 1 canal, 50 conversaciones/mes.
