@@ -36,7 +36,12 @@
   y `maybeRunAgentTurn` sin turno ni despacho en bloqueadas. Contrato `/api/bot`:
   llave aditiva `plan_limit` (409). `plan-gates.test.ts` RED→GREEN (13) +
   `whatsapp-save-webhook.test.ts` con la guarda mockeada. Specs: S3, Historias 4-5.
-- [ ] **T7** — UI `/admin`: layout guard, Clientes (lista/detalle/asignar plan), Planes.
-  Specs: S1, S6.
+- [x] **T7** — UI `/admin`: `(admin)/layout.tsx` con la guarda (`getSessionOrNull` +
+  `esSuperadmin` → `redirect("/")`), shell mínimo fuera de `appNavGroups`, `/admin`
+  redirige a Clientes; `clientes-client.tsx` (lista con uso + alta con la contraseña
+  devuelta una vez), `cliente-client.tsx` (detalle, dueño y asignación de plan, con
+  «sin plan» = sin límites) y `planes-client.tsx` (CRUD, vacío = sin límite, `switch`
+  de activo). `uso-cliente.tsx` comparte los cuatro números con barra que se tiñe al
+  tope. Tokens de `globals.css`; cuatro gates en verde. Specs: S1, S6.
 - [ ] **T8** — Docs (AGENTS.md, contrato `/api/bot` con `plan_limit`), guion e2e, cuatro
   gates en verde. Specs: S3, requisitos no funcionales.
