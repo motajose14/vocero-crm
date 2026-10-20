@@ -25,6 +25,7 @@ export function AppShell({
   branding,
   userName,
   role,
+  superadmin = false,
   theme,
   commit,
   agenda = false,
@@ -35,6 +36,8 @@ export function AppShell({
   branding: Branding;
   userName: string;
   role: string;
+  /** 031 — Quien administra la instancia ve el panel y la etiqueta cambiada. */
+  superadmin?: boolean;
   theme: ThemePreference;
   /** Commit resuelto en el servidor, con su procedencia (ver `resolveCommit`). */
   commit?: ResolvedCommit;
@@ -87,6 +90,7 @@ export function AppShell({
         commit={commit}
         userName={userName}
         role={role}
+        superadmin={superadmin}
         theme={theme}
         agenda={agenda}
         kicker={kicker}

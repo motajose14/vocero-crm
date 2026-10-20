@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appNavGroups,
   isNavActive,
+  rolLabel,
   SETTINGS_ITEM,
   settingsSections,
 } from "@/lib/nav";
@@ -55,6 +56,33 @@ describe("barra lateral agrupada", () => {
     expect(SETTINGS_ITEM.href).toBe("/settings");
     // Cada entrada trae su icono: el renglón lo pinta sin condicionar.
     for (const item of [...todos, SETTINGS_ITEM]) expect(item.icon).toBeDefined();
+  });
+
+  it("031 — el superadmin ve Panel de plataforma; una org normal, nunca", () => {
+    // Sin el flag, ningún grupo menciona /admin: un dueño de cliente ni siquiera
+    // sabe que el panel existe.
+    for (const role of ["owner", "member", null, undefined]) {
+      const hrefs = appNavGroups({ role }).flatMap((g) => g.items).map((i) => i.href);
+      expect(hrefs).not.toContain("/admin");
+    }
+    // Con el flag, el enlace va en su propio grupo al final: administrar la
+    // instancia no es el trabajo del día de nadie.
+    const grupos = appNavGroups({ role: "owner", superadmin: true });
+    expect(grupos.at(-1)).toMatchObject({ title: "Plataforma" });
+    expect(grupos.at(-1)!.items[0]).toMatchObject({
+      href: "/admin",
+      label: "Panel de plataforma",
+    });
+    // El resto del menú no cambia: el superadmin sigue viendo su CRM.
+    expect(labels(grupos.slice(0, 3))).toEqual(labels(appNavGroups({ role: "owner" })));
+  });
+
+  it("031 — la etiqueta del pie: Superadmin gana al rol de la organización", () => {
+    expect(rolLabel({ role: "owner", superadmin: true })).toBe("Superadmin");
+    expect(rolLabel({ role: "member", superadmin: true })).toBe("Superadmin");
+    expect(rolLabel({ role: "owner" })).toBe("Propietario");
+    expect(rolLabel({ role: "member" })).toBe("Equipo");
+    expect(rolLabel({ role: null })).toBe("Equipo");
   });
 
   it("una ruta hija activa su entrada, y /settings no activa nada más", () => {

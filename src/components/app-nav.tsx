@@ -7,7 +7,7 @@ import { AlertTriangle, LogOut, X } from "lucide-react";
 import type { Branding } from "@/lib/branding";
 import type { ThemePreference } from "@/lib/theme";
 import { cn, initials } from "@/lib/utils";
-import { appNavGroups, isNavActive, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
+import { appNavGroups, isNavActive, rolLabel, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
 import { signOut } from "@/lib/auth/client";
 import { useEvents } from "@/components/use-events";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -41,6 +41,7 @@ export function AppNav({
   branding,
   userName,
   role,
+  superadmin = false,
   theme,
   commit,
   agenda = false,
@@ -51,6 +52,8 @@ export function AppNav({
   branding: Branding;
   userName: string;
   role: string;
+  /** 031 — Superadmin de la instancia: añade el panel y cambia la etiqueta. */
+  superadmin?: boolean;
   theme: ThemePreference;
   /**
    * Commit resuelto en el servidor. Gana al de build porque puede venir de la
@@ -95,7 +98,7 @@ export function AppNav({
   const version = commit ?? { commit: BUILD_COMMIT, verified: BUILD_COMMIT !== "" };
   // #87 — Qué hay en el menú y en qué grupo lo decide `appNavGroups`; aquí
   // solo se pinta.
-  const groups = appNavGroups({ agenda, role });
+  const groups = appNavGroups({ agenda, role, superadmin });
 
   function renderItem(item: NavItem) {
     const active = isNavActive(pathname, item.href);
@@ -183,7 +186,7 @@ export function AppNav({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-semibold">{userName}</span>
           <span className="block truncate text-[11px] text-text-3">
-            {role === "owner" ? "Propietario" : "Equipo"} · En línea
+            {rolLabel({ role, superadmin })} · En línea
           </span>
         </span>
         <ThemeToggle initial={theme} />

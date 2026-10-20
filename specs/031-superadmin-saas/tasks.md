@@ -51,3 +51,12 @@
   (24 pasos) + arnés `scripts/e2e-superadmin.mjs` — CORRIDO contra la app con mocks:
   36/36 verdes. Cuatro gates en verde (typecheck, lint, suite 108/1219, build con
   `/admin/clientes` y `/admin/planes`). Specs: S3, S6, requisitos no funcionales.
+- [x] **T9** — Menú lateral del superadmin (L18): `superadmin` baja de
+  `(app)/layout.tsx` (una consulta `esSuperadmin` en el layout, no en cada ruta de API)
+  por `AppShell` a `AppNav`; `appNavGroups({ superadmin })` añade el grupo
+  «Plataforma» con «Panel de plataforma» a `/admin`, y `rolLabel()` decide la etiqueta
+  del pie («Superadmin» gana a «Propietario»/«Equipo»). Guardarraíl ampliado con la
+  excepción ANOTADA: `(app)/layout.tsx` solo LEE el atributo de un usuario contra su
+  propio id para pintar; `withAdmin`, `usageByOrg` y las altas siguen confinadas en
+  `/api/admin/*`. `nav.test.ts` RED→GREEN (+2: grupo Plataforma y `rolLabel`).
+  Cuatro gates en verde (typecheck, lint, suite 108/1221, build). Specs: Historia 2.

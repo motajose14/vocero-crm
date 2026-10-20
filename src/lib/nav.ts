@@ -6,6 +6,7 @@ import {
   Kanban,
   ListChecks,
   Settings,
+  ShieldCheck,
   Sparkles,
   Users,
   type LucideIcon,
@@ -50,11 +51,14 @@ export const SETTINGS_ITEM: NavItem = {
 export function appNavGroups({
   agenda = false,
   role,
+  superadmin = false,
 }: {
   /** 015 — "Citas" solo existe si esta instancia encendió la agenda. */
   agenda?: boolean;
   /** #86 — La guía de inicio solo para quien puede configurar. */
   role?: string | null;
+  /** 031 — El panel de plataforma es solo para superadmins de la instancia. */
+  superadmin?: boolean;
 }): NavGroup[] {
   const trabajo: NavItem[] = [
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
@@ -75,12 +79,44 @@ export function appNavGroups({
     { href: "/lab", label: "Laboratorio", icon: FlaskConical }
   );
 
-  return [
+  const grupos: NavGroup[] = [
     { title: "Trabajo", items: trabajo },
     { title: "Agente", items: agente },
     // 019 — Se mide al final: primero se atiende y se organiza.
     { items: [{ href: "/results", label: "Resultados", icon: ChartColumn }] },
   ];
+
+  // 031 — Administrar la instancia no es una actividad del negocio de nadie:
+  // va en su propio grupo, al final, y solo quien tiene el flag lo ve. Que el
+  // enlace exista no amplía la llave: `/admin` y `/api/admin/*` siguen
+  // preguntando por `is_superadmin` en el servidor.
+  if (superadmin) {
+    grupos.push({
+      title: "Plataforma",
+      items: [{ href: "/admin", label: "Panel de plataforma", icon: ShieldCheck }],
+    });
+  }
+
+  return grupos;
+}
+
+/**
+ * 031 — La etiqueta bajo el nombre en el pie del menú.
+ *
+ * El flag de superadmin gana al rol de la organización: una misma persona
+ * puede ser dueña de su cliente y, además, administrar la instancia, y
+ * enseñarle "Propietario" sería disfrazarle del hecho más importante de su
+ * sesión.
+ */
+export function rolLabel({
+  role,
+  superadmin = false,
+}: {
+  role?: string | null;
+  superadmin?: boolean;
+}): string {
+  if (superadmin) return "Superadmin";
+  return role === "owner" ? "Propietario" : "Equipo";
 }
 
 export type SettingsLink = { href: string; label: string };

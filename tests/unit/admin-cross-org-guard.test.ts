@@ -10,10 +10,22 @@ import { describe, expect, it } from "vitest";
  * `scoped()` no puede impedir que aparezca UNA consulta nueva que mire a todas
  * las organizaciones a la vez — que es exactamente lo que hace un CRM roto
  * cuando alguien añade «un listado global» sin darse cuenta. Aquí se fija, en
- * el código fuente, qué superficie tiene ese permiso:
+ * el código fuente, qué superficie tiene ese permiso.
  *
- *   - `esSuperadmin` (el flag de plataforma) solo se lee desde `withAdmin`
- *     (que vive en `src/lib/api.ts`) y desde el layout `/admin`;
+ * Hay DOS niveles y no se confunden:
+ *
+ *   - ACTUAR con autoridad de plataforma — solo `withAdmin`
+ *     (`src/lib/api.ts`) y el layout `/admin`. De aquí salen los 403 y las
+ *     consultas cross-org;
+ *   - LEER el flag — un círculo cerrado que hoy es `withAdmin`, el layout
+ *     `/admin` y, como única excepción, `app/(app)/layout.tsx`, que lo lee
+ *     SOLO para pintar la etiqueta y el enlace del menú lateral (031). Esa
+ *     lectura no otorga autoridad: es el atributo de UN usuario contra su
+ *     propio id, y `/admin` y `/api/admin/*` vuelven a preguntar en el
+ *     servidor antes de enseñar o hacer nada.
+ *
+ * Y además:
+ *
  *   - `withAdmin` solo se usa en las rutas `/api/admin/*`;
  *   - `usageByOrg` (recuentos de VARIAS organizaciones, sin `scoped()`) solo
  *     se llama desde `/api/admin/organizations`;
@@ -65,10 +77,14 @@ const SUPERADMIN_PERMITIDO =
   // El panel es el segmento NORMAL `app/admin/` (no un route group): un
   // `(admin)` no agrega URL y el panel quedaría en `/clientes` y `/planes`,
   // fuera de su prefijo. El arnés e2e lo atrapó con un 404 en `/admin`.
-  /^lib\/api\.ts$|^app\/api\/admin\/|^app\/admin\//;
+  // `app/(app)/layout.tsx` es la ÚNICA excepción: lee el flag para pintar
+  // "Superadmin" y el enlace al panel en el menú lateral. No actúa con esa
+  // autoridad — los tests siguientes siguen fijando que `withAdmin`,
+  // `usageByOrg` y las altas no salen de `/api/admin/*`.
+  /^lib\/api\.ts$|^app\/api\/admin\/|^app\/admin\/|^app\/\(app\)\/layout\.tsx$/;
 
 describe("guardarraíl: el superadmin es la única puerta cross-org", () => {
-  it("`esSuperadmin` solo se lee en /api/admin/* y /admin", () => {
+  it("`esSuperadmin` solo lo leen la puerta de plataforma y el layout de la app", () => {
     const importadores = importadoresDe("@/lib/auth/superadmin", "esSuperadmin");
     expect(importadores.length).toBeGreaterThan(0);
     for (const ruta of importadores) {
