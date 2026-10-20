@@ -11,8 +11,10 @@
   `conversation.plan_blocked`; `pnpm db:generate` → `drizzle/0021_*` (solo DDL; el Free
   lo asegura `ensureFreePlan()` en runtime). Prueba RED→GREEN: `tests/unit/plan-schema.test.ts`.
   Suite 1150/1150 + typecheck en verde. Specs: S2, S3, S5.
-- [ ] **T3** — `src/server/plans/` (`limits.ts`, `usage.ts`, `guards.ts`, `blocked.ts`) +
-  pruebas unitarias. Specs: S3.
+- [x] **T3** — `src/server/plans/` (`limits.ts`, `free.ts`, `blocked.ts`, `usage.ts`,
+  `guards.ts`) + pruebas unitarias. Prueba RED→GREEN: `tests/unit/planes-limites.test.ts`
+  (21 tests: semántica null=sin límite, tope, Free 100/2/1/50, nacimiento bloqueado,
+  desbloqueo perezoso y veredicto de envío). Specs: S3.
 - [ ] **T4** — Registro multi-tenant: registro abierto, organización por registro con
   plan Free, bypass interno intacto; actualiza `tests/unit/registration.test.ts`.
   Specs: S4.
