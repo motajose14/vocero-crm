@@ -15,9 +15,10 @@
   `guards.ts`) + pruebas unitarias. Prueba RED→GREEN: `tests/unit/planes-limites.test.ts`
   (21 tests: semántica null=sin límite, tope, Free 100/2/1/50, nacimiento bloqueado,
   desbloqueo perezoso y veredicto de envío). Specs: S3.
-- [ ] **T4** — Registro multi-tenant: registro abierto, organización por registro con
-  plan Free, bypass interno intacto; actualiza `tests/unit/registration.test.ts`.
-  Specs: S4.
+- [x] **T4** — Registro multi-tenant: con registro habilitado, organización por registro
+  con plan Free (`ensureFreePlan`), bypass interno intacto (no crea org);
+  `tests/unit/on-signup.test.ts` RED→GREEN (5) y `registration.test.ts` sigue en verde
+  (el gate `ALLOW_SIGNUP` no cambia). Specs: S4.
 - [ ] **T5** — Superadmin: flag, `requireSuperadmin`, `scripts/superadmin-grant.mjs`,
   API `/api/admin/*` (organizaciones + planes CRUD) + pruebas. Specs: S1, S2, S5.
 - [ ] **T6** — Límites en sus puertas (contactos, import, equipo, canales), conversación

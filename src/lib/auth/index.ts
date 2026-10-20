@@ -90,7 +90,9 @@ function createAuth() {
       user: {
         create: {
           after: async (user) => {
-            await onUserCreated(user.id, user.name);
+            await onUserCreated(user.id, user.name, {
+              internal: isInternalSignup(),
+            });
           },
         },
       },

@@ -1,6 +1,7 @@
-import { count, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
+import { ensureFreePlan } from "@/server/plans/free";
 
 /** Etapas sembradas del pipeline (US2). */
 const SEED_STAGES: { name: string; kind: "open" | "won" | "lost" }[] = [
@@ -11,30 +12,37 @@ const SEED_STAGES: { name: string; kind: "open" | "won" | "lost" }[] = [
   { name: "Perdido", kind: "lost" },
 ];
 
-/**
- * Primer registro de la instancia: crea la organización, deja al usuario como
- * propietario y siembra pipeline + perfil del agente.
- *
- * Solo actúa si NO existe ninguna organización (las cuentas de equipo las crea
- * el propietario y reciben su membresía explícita). Un advisory lock evita que
- * dos registros simultáneos en instancia vacía creen dos organizaciones.
- */
-export async function onUserCreated(userId: string, userName: string) {
-  const db = getDb();
-  await db.transaction(async (tx) => {
-    // Lock transaccional de "primer arranque" (clave arbitraria fija):
-    // dos registros simultáneos en instancia vacía → solo uno crea la org.
-    await tx.execute(sql`select pg_advisory_xact_lock(874201)`);
-    const [orgs] = await tx
-      .select({ n: count() })
-      .from(schema.organization);
-    if ((orgs?.n ?? 0) > 0) return;
+type Opciones = { internal?: boolean };
 
-    const orgId = newId("organization");
+/**
+ * 031 — CADA registro público crea SU organización (S4): nombre propio,
+ * slug único por construcción (sufijo del id), dueño, pipeline sembrado,
+ * perfil del agente y el plan Free asignado.
+ *
+ * `internal: true` (alta de equipo vía `runInternalSignup`) NO crea
+ * organización: su membresía la pone el dueño explícitamente (D8).
+ * Sin advisory lock: ya no hay carrera de "primer arranque" — cada registro
+ * lleva su propia org con un slug derivado de su propio id.
+ */
+export async function onUserCreated(
+  userId: string,
+  userName: string,
+  opciones: Opciones = {}
+) {
+  if (opciones.internal) return;
+
+  const db = getDb();
+  // Fuera de la transacción: idempotente a prueba de carreras por sí solo.
+  const planId = await ensureFreePlan(db);
+  const orgId = newId("organization");
+  const name = userName ? `Negocio de ${userName}` : "Mi negocio";
+
+  await db.transaction(async (tx) => {
     await tx.insert(schema.organization).values({
       id: orgId,
-      name: userName ? `Negocio de ${userName}` : "Mi negocio",
-      slug: "principal",
+      name,
+      slug: slugUnico(name, orgId),
+      planId,
     });
     await tx.insert(schema.member).values({
       id: newId("member"),
@@ -56,6 +64,24 @@ export async function onUserCreated(userId: string, userName: string) {
       organizationId: orgId,
     });
   });
+}
+
+/**
+ * Slug derivado del nombre con el sufijo del id de la organización: dos
+ * registros con el mismo nombre jamás colisionan (el id es único) y no hace
+ * falta leer la tabla para comprobarlo.
+ */
+export function slugUnico(name: string, orgId: string): string {
+  const base =
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40)
+      .replace(/-+$/g, "") || "negocio";
+  return `${base}-${orgId.slice(-12)}`;
 }
 
 /** Organización activa de un usuario (su primera membresía). */

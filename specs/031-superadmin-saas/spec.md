@@ -51,7 +51,9 @@ plan.
   «Free» lo asegura `ensureFreePlan()` en runtime, no la migración.
 - Módulo `src/server/plans/` con los límites efectivos de una organización, sus
   contadores y la guarda de bloqueo.
-- Registro público abierto: cada registro crea la SUYA organización con plan Free.
+- Registro multi-tenant: con el registro habilitado (`ALLOW_SIGNUP=true` o instancia
+  vacía), cada registro crea la SUYA organización con plan Free; el gate de `ALLOW_SIGNUP`
+  no cambia (las instalaciones existentes no abren registro sin querer).
 - API `/api/admin/*`: organizaciones (lista con uso, detalle, crear con cuenta dueña,
   asignar/cambiar plan) y planes (CRUD con `is_free`).
 - Aplicación de límites en: `POST /api/contacts`, `POST /api/contacts/import`, invitación
@@ -78,7 +80,10 @@ plan.
 Dado el registro público (abierto en SaaS), cuando un usuario se registra entonces se
 crea UNA organización suya con etapas de pipeline y perfil de agente (igual que el primer
 arranque de hoy) y se le asigna el plan «Free»; el bypass interno de invitación de equipo
-no crea organización. El registro ya NO se cierra tras la primera organización.
+no crea organización. El registro habilitado (`ALLOW_SIGNUP=true` o instancia vacía) ya
+no deja registros huérfanos: cada alta recibe su organización y su plan Free. Abrir o
+cerrar el registro sigue siendo decisión del operador con `ALLOW_SIGNUP` (una instalación
+self-hosted existente actualiza sin exponer registro abierto).
 
 ### Historia 2 — Superadmin maneja clientes (P1)
 
