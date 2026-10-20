@@ -38,9 +38,9 @@ export type BoardLead = {
   priority: PriorityValue | null;
 };
 
-export function PipelineClient() {
+export function PipelineClient({ currency: moneda }: { currency: string }) {
   const [stages, setStages] = useState<StageDto[]>([]);
-  const [currency, setCurrency] = useState("MXN");
+  const [currency, setCurrency] = useState(moneda);
   const [leads, setLeads] = useState<BoardLead[]>([]);
   const [activeLead, setActiveLead] = useState<BoardLead | null>(null);
   const [managing, setManaging] = useState(false);

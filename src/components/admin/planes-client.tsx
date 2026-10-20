@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { formatMoneyCents } from "@/lib/money";
 
 type Plan = {
   id: string;
@@ -51,7 +52,7 @@ function valorAVacio(v: number | null): string {
 }
 
 /** 031 — Pantalla de Planes: crear, editar y desactivar. El Free siempre existe. */
-export function PlanesClient() {
+export function PlanesClient({ currency }: { currency: string }) {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [cargando, setCargando] = useState(true);
   const [nuevo, setNuevo] = useState({
@@ -238,8 +239,12 @@ export function PlanesClient() {
               </div>
               <CardDescription>
                 Slug <span className="font-mono">{plan.slug}</span>
-                {plan.priceCents !== null &&
-                  ` · $${(plan.priceCents / 100).toFixed(2)} MXN/mes`}
+                {plan.priceCents !== null && (
+                  <span>
+                    {" · "}
+                    {formatMoneyCents(plan.priceCents, currency)}/mes
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-5">
