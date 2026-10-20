@@ -72,8 +72,11 @@ Zod en todo body; errores con `apiError`.
 
 ## UI `/admin`
 
-- `src/app/(admin)/layout.tsx`: `getSessionOrNull()` + carga de `is_superadmin`; sin flag
+- `src/app/admin/layout.tsx`: `getSessionOrNull()` + carga de `is_superadmin`; sin flag
   → `redirect("/")`. Renderiza su propio shell mínimo (fuera de `appNavGroups`).
+  Es el segmento NORMAL `admin/`, no un route group `(admin)`: un route group no
+  agrega URL y las pantallas quedarían en `/clientes` y `/planes`, fuera del
+  prefijo `/admin` (lo comprobó el arnés con un 404 en `/admin`).
 - `/admin` (redirect a clientes), `/admin/clientes` (lista + uso), `/admin/clientes/[id]`
   (detalle + asignación de plan), `/admin/planes` (CRUD con Free).
 - UI con tokens de `globals.css` (`bg-background`, `text-foreground`, `bg-primary`…), sin

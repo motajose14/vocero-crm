@@ -36,12 +36,18 @@
   y `maybeRunAgentTurn` sin turno ni despacho en bloqueadas. Contrato `/api/bot`:
   llave aditiva `plan_limit` (409). `plan-gates.test.ts` RED→GREEN (13) +
   `whatsapp-save-webhook.test.ts` con la guarda mockeada. Specs: S3, Historias 4-5.
-- [x] **T7** — UI `/admin`: `(admin)/layout.tsx` con la guarda (`getSessionOrNull` +
+- [x] **T7** — UI `/admin`: `admin/layout.tsx` con la guarda (`getSessionOrNull` +
   `esSuperadmin` → `redirect("/")`), shell mínimo fuera de `appNavGroups`, `/admin`
   redirige a Clientes; `clientes-client.tsx` (lista con uso + alta con la contraseña
   devuelta una vez), `cliente-client.tsx` (detalle, dueño y asignación de plan, con
   «sin plan» = sin límites) y `planes-client.tsx` (CRUD, vacío = sin límite, `switch`
   de activo). `uso-cliente.tsx` comparte los cuatro números con barra que se tiñe al
   tope. Tokens de `globals.css`; cuatro gates en verde. Specs: S1, S6.
-- [ ] **T8** — Docs (AGENTS.md, contrato `/api/bot` con `plan_limit`), guion e2e, cuatro
-  gates en verde. Specs: S3, requisitos no funcionales.
+- [x] **T8** — Docs: `AGENTS.md` (módulo `plans/`, `src/app/admin/`, `admin/*` en la
+  API, `plan_limit` en el contrato `/api/bot`, invariante «el superadmin es la única
+  puerta que cruza organizaciones», `pnpm superadmin:grant`), `plan.md` corregido
+  (el panel es el segmento `admin/`, no un route group). Guardarraíl
+  `admin-cross-org-guard.test.ts` (5) que escanea `src/`. Guion `tests/e2e/us-superadmin.md`
+  (24 pasos) + arnés `scripts/e2e-superadmin.mjs` — CORRIDO contra la app con mocks:
+  36/36 verdes. Cuatro gates en verde (typecheck, lint, suite 108/1219, build con
+  `/admin/clientes` y `/admin/planes`). Specs: S3, S6, requisitos no funcionales.
