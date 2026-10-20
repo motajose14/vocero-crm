@@ -23,7 +23,9 @@ import { chromium } from "playwright";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const BASE = "http://localhost:3000";
+// El puerto se puede sobreescribir: si el 3000 ya está ocupado por otro dev
+// server (que apunta a OTRA base), correr contra él ensucia datos ajenos.
+const BASE = process.env.E2E_BASE ?? "http://localhost:3000";
 const EMAIL = process.env.E2E_SA_EMAIL ?? "e2e-superadmin@vocero.test";
 const PASS = "password-e2e-sa-123";
 const S = Math.random().toString(36).slice(2, 6).toUpperCase();
