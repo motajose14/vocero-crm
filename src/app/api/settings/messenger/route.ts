@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
+import { getDb } from "@/lib/db";
 import { graphRequest, MetaApiError } from "@/lib/meta/client";
 import {
   getMessengerCredentialsByOrg,
   saveMessengerCredentials,
   tokenLast4,
 } from "@/server/messenger/credentials";
+import { checkCanConnectThisChannel } from "@/server/plans/guards";
 import {
   channelDisabledResponse,
   isChannelEnabled,
@@ -66,6 +68,11 @@ export const PUT = withAuth(async (session, req: Request) => {
   }
 
   const previa = await getMessengerCredentialsByOrg(session.organizationId);
+  // 031 — tope de canales: solo cuenta el NUEVO (re-guardar no es conectar).
+  const guard = await checkCanConnectThisChannel(getDb(), session.organizationId, {
+    yaConectado: previa !== null,
+  });
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
   // Sin secreto nuevo se conserva el que había: reconectar no debe apagar la
   // verificación de firma.
   const webhookSecret =

@@ -82,6 +82,11 @@ export async function POST(req: Request) {
       if (err.code === "message_limit") {
         return apiError(409, "message_limit", err.message);
       }
+      // 031 — sobre el límite del plan: llave NUEVA, aditiva al contrato
+      // ("agregar una llave cabe"; quitar o renombrar, no).
+      if (err.code === "plan_limit") {
+        return apiError(409, "plan_limit", err.message);
+      }
       // Un texto de más de 4,096 caracteres por WhatsApp ya daba 422
       // `invalid_body` (lo cortaba el esquema): se conserva el código.
       if (err.code === "text_too_long") {

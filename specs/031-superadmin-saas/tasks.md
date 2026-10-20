@@ -27,9 +27,15 @@
   `usageByOrg` agrupado y `scripts/superadmin-grant.mjs` (`pnpm superadmin:grant`);
   `admin-guard-schemas.test.ts` (9) + `admin-routes.test.ts` (16) RED→GREEN.
   Specs: S1, S2, S5.
-- [ ] **T6** — Límites en sus puertas (contactos, import, equipo, canales), conversación
-  sobre cuota con `plan_blocked`, guarda de envío con desbloqueo perezoso, sin turno de
-  IA en bloqueadas + pruebas. Specs: S3, Historias 4-5.
+- [x] **T6** — Límites en sus puertas: `checkCanCreateContact` en `POST /api/contacts`
+  y en la importación (todos los renglones válidos antes de tocar nada → atómico),
+  `checkCanInviteMember` en equipo ANTES del signup, `checkCanConnectThisChannel` en las
+  cuatro rutas de canal (solo cuenta el NUEVO; re-guardar no tropezca). Conversación que
+  nace con `plan_blocked=true` en `getOrCreateConversation` (`is_test` nunca), pre-vuelo
+  en `send.ts` (`block` → `SendError plan_limit` 409; `send_and_release` limpia el flag)
+  y `maybeRunAgentTurn` sin turno ni despacho en bloqueadas. Contrato `/api/bot`:
+  llave aditiva `plan_limit` (409). `plan-gates.test.ts` RED→GREEN (13) +
+  `whatsapp-save-webhook.test.ts` con la guarda mockeada. Specs: S3, Historias 4-5.
 - [ ] **T7** — UI `/admin`: layout guard, Clientes (lista/detalle/asignar plan), Planes.
   Specs: S1, S6.
 - [ ] **T8** — Docs (AGENTS.md, contrato `/api/bot` con `plan_limit`), guion e2e, cuatro

@@ -54,6 +54,11 @@ vi.mock("@/server/whatsapp/connect", () => ({
   registerWebhookForNumber: register,
   unregisterWebhookForNumber: unregister,
 }));
+// 031 — el tope de canales del plan se prueba en `plan-gates.test.ts`; aquí
+// la puerta siempre deja pasar, que es lo que a este test le importa.
+vi.mock("@/server/plans/guards", () => ({
+  checkCanConnectThisChannel: async () => ({ ok: true }),
+}));
 
 import { DELETE, PUT } from "@/app/api/settings/whatsapp/route";
 import { GET as webhookGet, POST as webhookPost } from "@/app/api/settings/webhook/route";

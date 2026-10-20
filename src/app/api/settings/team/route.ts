@@ -5,6 +5,7 @@ import { getAuth, runInternalSignup } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { scoped } from "@/lib/db/tenant";
+import { checkCanInviteMember } from "@/server/plans/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,11 @@ export const POST = withAuth(async (session, req: Request) => {
   if (session.role !== "owner") {
     return apiError(403, "forbidden", "Solo el propietario puede crear cuentas");
   }
+  // 031 — tope de miembros del plan: se pregunta ANTES de crear la cuenta,
+  // para que un 409 no deje una cuenta suelta sin membresía.
+  const guard = await checkCanInviteMember(getDb(), session.organizationId);
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
+
   const body = await parseBody(req, createSchema);
   if (!body.ok) return body.response;
 

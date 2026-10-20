@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
+import { getDb } from "@/lib/db";
 import {
   desconectarCanal,
   getCredentialsByOrg,
   saveCredentials,
   tokenLast4,
 } from "@/server/whatsapp/credentials";
+import { checkCanConnectThisChannel } from "@/server/plans/guards";
 import {
   registerWebhookForNumber,
   testConnection,
@@ -52,6 +54,14 @@ const putSchema = z.object({
 export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
+
+  // 031 — tope de canales: solo cuenta el NUEVO. Re-guardar las credenciales
+  // de un número ya conectado no es conectar otro canal.
+  const previa = await getCredentialsByOrg(session.organizationId);
+  const guard = await checkCanConnectThisChannel(getDb(), session.organizationId, {
+    yaConectado: previa !== null,
+  });
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
 
   const check = await testConnection(body.data.phoneNumberId, body.data.token);
   if (!check.ok) {

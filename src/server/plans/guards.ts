@@ -94,6 +94,23 @@ export async function checkCanConnectChannel(db: Db, orgId: string): Promise<Gua
 }
 
 /**
+ * 031 — La regla COMPLETA del canal: solo cuenta como canal NUEVO el que aún
+ * no tenía credenciales. Re-guardar las de uno ya conectado (rotar el token,
+ * cambiar el secreto) no es conectar y jamás debe tropezar con el tope.
+ *
+ * Es la única puerta que las cuatro rutas de canales usan, para que la
+ * excepción "re-guardar no cuenta" esté escrita en UN solo lugar.
+ */
+export async function checkCanConnectThisChannel(
+  db: Db,
+  orgId: string,
+  opts: { yaConectado: boolean }
+): Promise<Guard> {
+  if (opts.yaConectado) return GUARD_OK;
+  return checkCanConnectChannel(db, orgId);
+}
+
+/**
  * Tras insertar la conversación nueva (el webhook siempre ingiere): ¿nace
  * con el chat bloqueado? El recuento del mes YA la incluye.
  */

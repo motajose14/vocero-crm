@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
+import { getDb } from "@/lib/db";
 import {
   channelDisabledResponse,
   isChannelEnabled,
@@ -9,6 +10,7 @@ import {
   saveTiktokCredentials,
   tokenLast4,
 } from "@/server/tiktok/credentials";
+import { checkCanConnectThisChannel } from "@/server/plans/guards";
 import { ensureWebhookForOrg } from "@/server/zernio/conexiones";
 import { accountHealth, zernioAccountName } from "@/server/zernio/cuentas";
 import { resolveZernioAccount } from "@/server/zernio/guardar";
@@ -57,11 +59,18 @@ export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
 
+  // 031 — tope de canales: solo cuenta el NUEVO. Se pregunta ANTES de
+  // resolver la cuenta contra Zernio, que es el paso caro.
+  const previa = await getTiktokCredentialsByOrg(session.organizationId);
+  const guard = await checkCanConnectThisChannel(getDb(), session.organizationId, {
+    yaConectado: previa !== null,
+  });
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
+
   // 023: la cuenta se resuelve contra Zernio, no se guarda a ciegas.
   const cuenta = await resolveZernioAccount(body.data.token, body.data.accountRef, "tiktok");
   if (!cuenta.ok) return cuenta.response;
 
-  const previa = await getTiktokCredentialsByOrg(session.organizationId);
   const username =
     (cuenta.account.username ?? body.data.username)?.replace(/^@/, "") || null;
   await saveTiktokCredentials({

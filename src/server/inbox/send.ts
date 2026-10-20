@@ -46,6 +46,7 @@ import {
   aiWindowClosedMessage,
 } from "@/server/channels/capabilities";
 import { isChannelEnabled } from "@/server/channels/enabled";
+import { currentSendVerdict } from "@/server/plans/guards";
 import { serializeMessage } from "@/server/inbox/ingest";
 import {
   saveMediaFile,
@@ -64,6 +65,8 @@ export class SendError extends Error {
     | "message_limit"
     /** 022: el texto no cabe en el canal de esa conversación. */
     | "text_too_long"
+    /** 031: la organización está sobre el límite de su plan. */
+    | "plan_limit"
     | "meta_error"
     | "meta_unavailable"
     | "upload_failed";
@@ -159,6 +162,32 @@ async function prepareSend(
       "sandbox_violation",
       "Conversación de prueba del Laboratorio: el envío real está prohibido"
     );
+  }
+
+  // 031 — tope del plan: la conversación bloqueada se libera SOLA si la
+  // organización volvió dentro de límites (plan nuevo, mes nuevo, contactos
+  // por debajo del tope); si sigue sin margen, ni la IA ni la persona
+  // responden — aquí, en el pre-vuelo único que comparten todos los caminos
+  // de envío (humano, IA, bot y cerebro externo). Sin bloqueo no se pregunta
+  // nada: 3 consultas por envío no se justifican para un "sí, manda".
+  if (row.conversation.planBlocked) {
+    const veredicto = await currentSendVerdict(db, organizationId, {
+      planBlocked: true,
+    });
+    if (veredicto === "block") {
+      throw new SendError(
+        "plan_limit",
+        "Se alcanzó el límite de tu plan: esta conversación queda sin respuesta hasta que haya margen. Actualiza tu plan para volver a responder."
+      );
+    }
+    if (veredicto === "send_and_release") {
+      // Desbloqueo perezoso: se limpia el flag y el envío sigue normal.
+      row.conversation.planBlocked = false;
+      await db
+        .update(schema.conversation)
+        .set({ planBlocked: false, updatedAt: new Date() })
+        .where(eq(schema.conversation.id, row.conversation.id));
+    }
   }
 
   // 014: Instagram tiene su propio transporte, su propia ventana y NO tiene

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
+import { getDb } from "@/lib/db";
 import { IMPORT_MAX_ROWS, prepareImport } from "@/lib/contact-import";
 import { importContacts } from "@/server/contacts-import";
+import { checkCanCreateContact } from "@/server/plans/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,15 @@ export const POST = withAuth(async (session, req: Request) => {
       "Ningún renglón trae un teléfono válido con código de país"
     );
   }
+
+  // 031 — tope de contactos: se pregunta por TODOS los renglones válidos
+  // ANTES de tocar nada, así la importación es atómica o no ocurre.
+  const guard = await checkCanCreateContact(
+    getDb(),
+    session.organizationId,
+    valid.length
+  );
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
 
   const result = await importContacts(session.organizationId, valid, {
     aiPaused: body.data.aiPaused ?? false,

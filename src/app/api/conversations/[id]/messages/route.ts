@@ -68,6 +68,8 @@ const SEND_ERROR_STATUS: Record<SendError["code"], number> = {
   reconnect_required: 409,
   window_closed: 409,
   message_limit: 409,
+  /** 031: sobre el límite del plan; aditivo al contrato (agregar una llave cabe). */
+  plan_limit: 409,
   text_too_long: 422,
   meta_error: 422,
   meta_unavailable: 503,

@@ -24,6 +24,7 @@ import {
 import { registrarAnuncioDeOrigen } from "@/server/attribution/store";
 import { onLeadActivity } from "@/server/inbox/lead-activity";
 import { maybeRunAgentTurn } from "@/server/ai/trigger";
+import { conversationBornBlockedNow } from "@/server/plans/guards";
 
 /** Tipos de contenido soportados; el resto se ignora sin error. */
 const SUPPORTED_TYPES = new Set([
@@ -223,7 +224,23 @@ export async function getOrCreateConversation(
     })
     .onConflictDoNothing()
     .returning();
-  if (inserted[0]) return inserted[0];
+  const nueva = inserted[0];
+  if (nueva) {
+    // 031 — SOLO el webhook llega aquí, y aquí nunca se rechaza: la
+    // conversación entra igual y, si la organización está sobre cuota o sobre
+    // el tope de contactos, NACE con el chat bloqueado (ni IA ni persona
+    // responden hasta que vuelva a tener margen).
+    // El Laboratorio (`is_test`) jamás se bloquea: sus conversaciones son de
+    // ensayo y no cuentan para la cuota.
+    if (!nueva.isTest && (await conversationBornBlockedNow(db, organizationId))) {
+      await db
+        .update(schema.conversation)
+        .set({ planBlocked: true, updatedAt: new Date() })
+        .where(eq(schema.conversation.id, nueva.id));
+      nueva.planBlocked = true;
+    }
+    return nueva;
+  }
 
   const rows = await db
     .select()

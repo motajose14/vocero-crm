@@ -8,6 +8,7 @@ import { normalizeMx } from "@/lib/meta/client";
 import { digitsOnly, normalizeText } from "@/lib/search";
 import { serializeContact } from "@/server/contacts";
 import { createLeadForContact } from "@/server/inbox/lead-activity";
+import { checkCanCreateContact } from "@/server/plans/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,12 @@ export const POST = withAuth(async (session, req: Request) => {
   if (!body.ok) return body.response;
 
   const db = getDb();
+  // 031 — tope de contactos del plan ANTES del insert: en el tope no se crea
+  // nada y responde 409 `plan_limit`. (Lo que entra por webhook no pasa por
+  // aquí: la puerta es de creación manual/importación, nunca de ingesta.)
+  const guard = await checkCanCreateContact(db, session.organizationId);
+  if (!guard.ok) return apiError(409, guard.code, guard.message);
+
   // 003: la identidad WhatsApp se deriva del teléfono normalizado.
   const phone = normalizeMx(body.data.phone);
   const inserted = await db
