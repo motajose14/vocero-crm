@@ -4,7 +4,8 @@ Lee primero [AGENTS.md](AGENTS.md): el mapa del código y las reglas de
 modificación viven ahí; este archivo solo añade lo específico de Claude Code.
 
 Vocero es un CRM de WhatsApp open source (MIT), self-hosted, con agente de IA y
-Laboratorio de auto-evaluación. Una instancia = un negocio. Este archivo guía a
+Laboratorio de auto-evaluación. Una instancia = un negocio, o — en forma SaaS —
+una instancia multi-tenant con planes y límites (spec 031). Este archivo guía a
 Claude Code (u otro asistente) para operar y **modificar** este repositorio —
 el caso típico: una agencia adaptando Vocero para un cliente.
 

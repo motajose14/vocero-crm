@@ -8,7 +8,7 @@ de skills, scripts ni plugins de ningún asistente.
 
 ## Principios inviolables
 
-- **Una instancia = un negocio.** Self-hosted; aun así, toda tabla de dominio lleva `organization_id` y toda consulta pasa por `scoped()`.
+- **Una instancia = un negocio, o un SaaS multi-tenant.** Self-hosted por defecto; como SaaS, una sola instancia aloja varias organizaciones con planes y límites (superadmin en `/admin`, ver `specs/031-superadmin-saas/`). En cualquier forma, toda tabla de dominio lleva `organization_id` y toda consulta pasa por `scoped()`.
 - **Solo WhatsApp Cloud API oficial.** Nada de Baileys ni sesiones web. Todo tráfico a Meta pasa por `src/lib/meta/client.ts`.
 - **Secretos cifrados en reposo** (AES-256-GCM, `src/lib/crypto/`); jamás al cliente ni a logs. Los tokens de WhatsApp y del proveedor de IA solo enseñan sus últimos 4.
 - **El token de WhatsApp nunca sale del CRM.** Un bot externo conversa a través de `/api/bot/*`, no con Meta.

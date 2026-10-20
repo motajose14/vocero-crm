@@ -1,49 +1,63 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Versión: 1.3.0 → 1.4.0
+Versión: 1.4.0 → 2.0.0
 
 Cambios:
-  - Principio II "Soberanía / Self-Hosted" → EXPANDIDO: la lista cerrada de
-    dependencias de runtime gana una tercera categoría, **conectores
-    opcionales**, admisible SOLO bajo cinco condiciones (apagados por defecto
-    tras una bandera de despliegue, aislados tras adaptador dedicado con
-    contrato público, instancia completa sin ellos con degradación definida,
-    credenciales cifradas del propio negocio, y verificables en CI apagados y
-    encendidos). La frase de prohibición se acota: de "PROHIBIDO en v1 … y
-    servicios de Google" a "PROHIBIDO como dependencia del núcleo", con la vía
-    única del conector opcional para servicios de terceros.
-  - Principios I, III, IV, V, VI, VII, VIII y IX: íntegros (sin cambio).
-  - "Restricciones de Plataforma y Seguridad": sin cambio — su regla de
-    aislamiento tras adaptadores dedicados ya cubre a los conectores.
-  - Governance: sin cambio.
+  - Intro del producto → REFORMULADA: «una instancia = un negocio» deja de ser
+    la única forma de operar. Vocero corre en dos formas compatibles:
+    self-hosted (una instancia = un negocio) o SaaS multi-tenant (una sola
+    instancia aloja N organizaciones con planes y límites, administradas por
+    un superadmin de plataforma).
+  - Principio III "Multi-Tenancy Real" → EXPANDIDO: el modelo ya no solo
+    prepara el aislamiento «para no cerrar la puerta a evoluciones»: una
+    instancia PUEDE alojar varias organizaciones (forma SaaS). El aislamiento
+    por `scoped()` sigue obligatorio y el único código que cruza tenants es la
+    puerta de administración `/admin`, que exige `user.is_superadmin`.
+  - Principio VIII "Foco Vertical" → REDEFINIDO: se elimina la exclusión «Lo
+    que solo sirva a una plataforma centralizada (billing, planes,
+    multi-instancia) queda FUERA». La capa de plataforma (superadmin de
+    plataforma, planes con Free, límites por organización, multi-instancia)
+    queda DENTRO como la forma SaaS de este mismo CRM vertical. Los cobros y
+    el checkout siguen FUERA (etapa 2) y solo pueden entrar como conector
+    opcional bajo las cinco condiciones del Principio II: billing sigue
+    prohibido como dependencia del núcleo.
+  - "Restricciones de Plataforma y Seguridad" (Instancia pública endurecida)
+    → precisada: el registro público sigue exigiendo habilitación explícita
+    (`ALLOW_SIGNUP` o instancia vacía); habilitado, CADA registro crea su
+    propia organización con el plan Free (nunca registros huérfanos).
+  - Principios I, II, IV, V, VI, VII, IX: íntegros (sin cambio).
+  - Governance: sin cambio (esta enmienda sigue su procedimiento).
 
-Bump: MINOR (1.3.0 → 1.4.0) — expansión material de un principio; no elimina ni
-redefine nada de forma incompatible: una instancia default sigue cumpliendo
-exactamente la promesa vigente ("un VPS, un dominio, credenciales de Meta y un
-token de OpenRouter. Nada más").
+Bump: MAJOR (1.4.0 → 2.0.0) — redefinición incompatible de una frontera de
+alcance NO NEGOCIABLE (Principio VIII), autorizada por el responsable. NO toca
+seguridad: aislamiento de tenants (I), soberanía y lista cerrada de
+dependencias (II) e idempotencia/guardarraíles siguen intactos; una instancia
+self-hosted default sigue cumpliendo la misma promesa ("un VPS, un dominio,
+credenciales de Meta y un token de OpenRouter. Nada más").
 
 Motivación:
-  El canal de Instagram (014 / ADR-001) entró como integración opcional detrás
-  de CHANNELS sin tocar este principio, porque es la misma Meta Graph API del
-  canal permitido. El motor de agendamiento (feature 015) necesita Zoom y
-  Google — proveedores nuevos — y el principio no daba ninguna vía, ni siquiera
-  apagados por defecto; la única salida habría sido "cada quien su fork", que
-  ADR-001 ya demostró insostenible (la rama 004-motor-agenda quedó irrescatable
-  en 26 días: 76 commits atrás y migración colisionada). La soberanía que el
-  principio protege no se toca: el costo lo paga únicamente la instancia que
-  enciende la bandera y pega SUS credenciales, y la condición 5 lo vuelve
-  verificable en vez de prometido.
-  Propuesta por escrito y ratificación del responsable (2026-08-26):
-  specs/015-motor-agenda-universal/enmienda-constitucional.md.
+  Petición del responsable (2026-10-19): «pibe vamos a crear una rama nueva, en
+  la cual haremos un superadmin para el manejo de clientes, crear planes con
+  posibilidad de plan free,   y colocar limites en algunas cosas, es decir
+  transformarlo en saas». Propuesta por escrito con decisiones de alcance en
+  specs/031-superadmin-saas/spec.md: una instancia multi-tenant, cuatro
+  límites (contactos, usuarios del equipo, canales, conversaciones/mes),
+  planes administrados a mano con Free incluido, sin cobros. El plan
+  docs/plan-1.5-y-2.0.md dejó multi-empresa «cosa de la edición cloud»;
+  esta enmienda la trae al núcleo como forma SaaS sin añadir dependencias
+  externas nuevas.
 
 Plantillas dependientes:
   - .specify/templates/spec-template.md — ✅ compatible (sin cambios).
   - .specify/templates/plan-template.md — ✅ compatible; su Constitution Check
-    se evalúa contra esta versión (un conector externo pasa el gate si y solo
-    si cumple las cinco condiciones).
+    se evalúa contra esta versión (superadmin/planes/límites multi-tenant
+    pasan el gate; los cobros, no).
   - .specify/templates/tasks-template.md — ✅ compatible.
-  - CLAUDE.md — ✅ actualizado en este mismo cambio (regla de Soberanía).
+  - AGENTS.md — ✅ actualizado en este mismo cambio (Principios inviolables 1).
+  - CLAUDE.md — ✅ actualizado en este mismo cambio (línea de «una instancia =
+    un negocio»). README y docs/plan-1.5-y-2.0.md se actualizan en la tarea de
+    docs de 031.
 
 TODOs diferidos:
   - Deuda documental heredada de la 1.3.0 (features entre `003` y la app 1.2.0
@@ -54,7 +68,9 @@ TODOs diferidos:
 
 Vocero CRM es un CRM de WhatsApp con agente de IA, open source (MIT), self-hosted y
 gratuito, diseñado para que las agencias de IA lo desplieguen en el VPS de sus
-clientes: una instancia = un negocio. Esta constitución define las reglas no
+clientes — una instancia = un negocio — o para operarlo como SaaS multi-tenant en
+una sola instancia que aloja varios negocios con planes y límites. Esta
+constitución define las reglas no
 negociables del producto. Aplica a todas las fases del flujo de trabajo (specify,
 plan, tasks, implement). Cualquier conflicto entre una decisión de implementación y
 esta constitución SE RESUELVE A FAVOR de esta constitución.
@@ -124,9 +140,10 @@ fuga de soberanía que rompe la promesa "gratis y tuyo".
 ### III. Multi-Tenancy Real
 
 El sistema sirve a organizaciones independientes desde una sola instancia lógica.
-En Vocero cada instancia sirve a UN negocio, pero el modelo de datos es
-multi-tenant real (organización del plugin de auth) para mantener el aislamiento
-exigible y no cerrar la puerta a evoluciones.
+En Vocero una instancia puede servir a UN negocio (forma self-hosted) o alojar
+VARIOS negocios a la vez (forma SaaS multi-tenant con planes y límites), y el
+modelo de datos es multi-tenant real (organización del plugin de auth) para
+mantener el aislamiento exigible en ambas formas.
 
 - Cada organización (tenant) gestiona sus propios usuarios, roles y permisos.
 - El identificador de tenant (`organization_id`) es un parámetro de primer nivel en
@@ -230,9 +247,13 @@ conversaciones de WhatsApp de UN negocio* se rechaza.
 - WhatsApp Cloud API es el canal; el producto es el CRM. Features de canal que no
   sirvan a atender/organizar/convertir (broadcast masivo, scraping de números,
   flujos visuales genéricos) quedan FUERA del alcance de v1.
-- Toda feature MUST servir a la agencia que despliega o al negocio que opera UNA
-  instancia. Lo que solo sirva a una plataforma centralizada (billing, planes,
-  multi-instancia) queda FUERA.
+- Toda feature MUST servir a la agencia que despliega o al negocio que opera la
+  instancia — y, en la forma SaaS, a la plataforma que aloja varios negocios.
+  La capa de plataforma (superadmin de plataforma, planes con Free, límites por
+  organización, multi-instancia) queda DENTRO del alcance como la forma SaaS de
+  este mismo CRM vertical. Los cobros y el checkout quedan FUERA hasta la etapa
+  2 y solo pueden entrar como conector opcional bajo las cinco condiciones del
+  Principio II: nunca como dependencia del núcleo.
 
 **Rationale**: Un foco vertical explícito mantiene el modelo de datos alineado con el
 negocio real y da un criterio claro para aceptar o rechazar alcance.
@@ -287,9 +308,10 @@ Estas restricciones derivan de los Principios I y II y son verificables en revis
   través de adaptadores dedicados (cliente Graph API propio, adaptador LLM
   OpenRouter-compatible), no dispersas por el dominio.
 - **Instancia pública endurecida**: las rutas de mock/desarrollo devuelven 404
-  incondicional en producción; el registro se cierra tras la primera organización
-  (salvo habilitación explícita); los entornos de prueba internos JAMÁS alcanzan la
-  API real de WhatsApp.
+  incondicional en producción; el registro público requiere habilitación explícita
+  (`ALLOW_SIGNUP` o instancia vacía) y, cuando está habilitado, cada registro crea
+  su propia organización con el plan Free; los entornos de prueba internos JAMÁS
+  alcanzan la API real de WhatsApp.
 
 ## Flujo de Desarrollo y Puertas de Calidad
 
@@ -334,4 +356,4 @@ práctica, convención o preferencia; ante un conflicto, gana la constitución.
 - **Propagación**: al enmendar la constitución se revisan y, si procede, se actualizan
   las plantillas dependientes (plan, spec, tasks).
 
-**Version**: 1.4.0 | **Ratified**: 2026-07-09 | **Last Amended**: 2026-08-26
+**Version**: 2.0.0 | **Ratified**: 2026-07-09 | **Last Amended**: 2026-10-19
