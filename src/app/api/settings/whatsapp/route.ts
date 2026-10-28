@@ -32,6 +32,7 @@ export const GET = withAuth(async (session) => {
       verifiedName: creds.verifiedName,
       status: creds.status,
       tokenLast4: tokenLast4(creds.token),
+      appSecretConfigured: creds.appSecretConfigured,
     },
   });
 });
@@ -40,6 +41,7 @@ const putSchema = z.object({
   wabaId: z.string().trim().min(1),
   phoneNumberId: z.string().trim().min(1),
   token: z.string().trim().min(1),
+  appSecret: z.string().trim().optional(),
 });
 
 /**
@@ -74,6 +76,7 @@ export const PUT = withAuth(async (session, req: Request) => {
     wabaId: body.data.wabaId,
     phoneNumberId: body.data.phoneNumberId,
     token: body.data.token,
+    ...(body.data.appSecret ? { appSecret: body.data.appSecret } : {}),
     displayPhoneNumber: check.displayPhoneNumber,
     verifiedName: check.verifiedName,
   });

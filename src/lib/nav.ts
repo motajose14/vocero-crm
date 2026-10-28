@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ChartColumn,
   FlaskConical,
+  Gauge,
   Inbox,
   Kanban,
   Layers,
@@ -84,7 +85,14 @@ export function appNavGroups({
     { title: "Trabajo", items: trabajo },
     { title: "Agente", items: agente },
     // 019 — Se mide al final: primero se atiende y se organiza.
-    { items: [{ href: "/results", label: "Resultados", icon: ChartColumn }] },
+    {
+      items: [
+        { href: "/results", label: "Resultados", icon: ChartColumn },
+        ...(canConfigure(role)
+          ? [{ href: "/plan-uso", label: "Plan y uso", icon: Gauge }]
+          : []),
+      ],
+    },
   ];
 
   // 031 — Administrar la instancia no es una actividad del negocio de nadie:

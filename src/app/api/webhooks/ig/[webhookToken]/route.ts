@@ -1,5 +1,10 @@
 import { after } from "next/server";
 import { getEnv } from "@/lib/env";
+import {
+  MAX_WEBHOOK_BODY_BYTES,
+  readRequestBodyLimited,
+  RequestBodyTooLargeError,
+} from "@/lib/request-body";
 import { isValidSignature, isValidWebhookToken } from "@/server/inbox/webhook";
 import { processMetaInstagramPayload } from "@/server/instagram/ingest";
 import {
@@ -50,7 +55,17 @@ export async function POST(req: Request, { params }: Params) {
     return new Response(null, { status: 404 });
   }
 
-  const rawBody = await req.text();
+  let rawBody: string;
+  try {
+    rawBody = new TextDecoder().decode(
+      await readRequestBodyLimited(req, MAX_WEBHOOK_BODY_BYTES)
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return new Response(null, { status: 413 });
+    }
+    throw error;
+  }
 
   let payload: unknown;
   try {

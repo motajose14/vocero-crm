@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,13 @@ export function PlanesClient({ currency }: { currency: string }) {
   });
   const [creando, setCreando] = useState(false);
   const [borrando, setBorrando] = useState<string | null>(null);
+  const [planAEliminar, setPlanAEliminar] = useState<Plan | null>(null);
+  const [errorBorrado, setErrorBorrado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [estadoGuardado, setEstadoGuardado] = useState<
+    Record<string, { solicitud: number; estado: "guardando" | "guardado" | "fallido"; mensaje?: string }>
+  >({});
+  const solicitudesGuardado = useRef<Record<string, number>>({});
   /**
    * Texto tal cual se teclea, por campo: `vacioAValor` devuelve `null` para
    * basura y eso vaciaría el input en mitad de escribir «12a» → borraría el
@@ -117,7 +123,12 @@ export function PlanesClient({ currency }: { currency: string }) {
   }
 
   async function guardar(plan: Plan) {
-    setError(null);
+    const solicitud = (solicitudesGuardado.current[plan.id] ?? 0) + 1;
+    solicitudesGuardado.current[plan.id] = solicitud;
+    setEstadoGuardado((prev) => ({
+      ...prev,
+      [plan.id]: { solicitud, estado: "guardando" },
+    }));
     const res = await fetch(`/api/admin/plans/${plan.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -131,19 +142,32 @@ export function PlanesClient({ currency }: { currency: string }) {
         active: plan.active,
       }),
     }).catch(() => null);
+    if (solicitudesGuardado.current[plan.id] !== solicitud) return;
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as {
         error?: { message?: string };
       } | null;
-      setError(data?.error?.message ?? "No se pudo guardar el plan");
+      if (solicitudesGuardado.current[plan.id] !== solicitud) return;
+      setEstadoGuardado((prev) => ({
+        ...prev,
+        [plan.id]: {
+          solicitud,
+          estado: "fallido",
+          mensaje: data?.error?.message ?? "No se pudo guardar el plan",
+        },
+      }));
       return;
     }
+    setEstadoGuardado((prev) => ({
+      ...prev,
+      [plan.id]: { solicitud, estado: "guardado" },
+    }));
     void refetch();
   }
 
   async function borrar(plan: Plan) {
     setBorrando(plan.id);
-    setError(null);
+    setErrorBorrado(null);
     const res = await fetch(`/api/admin/plans/${plan.id}`, {
       method: "DELETE",
     }).catch(() => null);
@@ -152,11 +176,24 @@ export function PlanesClient({ currency }: { currency: string }) {
       const data = (await res?.json().catch(() => null)) as {
         error?: { message?: string };
       } | null;
-      setError(data?.error?.message ?? "No se pudo borrar el plan");
+      setErrorBorrado(data?.error?.message ?? "No se pudo borrar el plan");
       return;
     }
+    setPlanAEliminar(null);
     void refetch();
   }
+
+  useEffect(() => {
+    if (!planAEliminar || borrando) return;
+    const cancelarConEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPlanAEliminar(null);
+        setErrorBorrado(null);
+      }
+    };
+    window.addEventListener("keydown", cancelarConEscape);
+    return () => window.removeEventListener("keydown", cancelarConEscape);
+  }, [planAEliminar, borrando]);
 
   return (
     <div className="space-y-6">
@@ -230,7 +267,10 @@ export function PlanesClient({ currency }: { currency: string }) {
                     variant="ghost"
                     size="sm"
                     disabled={borrando === plan.id}
-                    onClick={() => borrar(plan)}
+                    onClick={() => {
+                      setErrorBorrado(null);
+                      setPlanAEliminar(plan);
+                    }}
                     aria-label={`Borrar plan ${plan.name}`}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
@@ -247,6 +287,21 @@ export function PlanesClient({ currency }: { currency: string }) {
                 )}
               </CardDescription>
             </CardHeader>
+            {estadoGuardado[plan.id] && (
+              <div className="px-6 pb-2 text-sm" aria-live="polite">
+                {estadoGuardado[plan.id]?.estado === "guardando" && (
+                  <p role="status" className="text-text-2">Guardando cambios…</p>
+                )}
+                {estadoGuardado[plan.id]?.estado === "guardado" && (
+                  <p role="status" className="text-text-2">Cambios guardados</p>
+                )}
+                {estadoGuardado[plan.id]?.estado === "fallido" && (
+                  <p role="alert" className="text-danger-text">
+                    {estadoGuardado[plan.id]?.mensaje ?? "No se pudo guardar el plan"}
+                  </p>
+                )}
+              </div>
+            )}
             <CardContent className="grid gap-4 md:grid-cols-5">
               <div className="space-y-1.5">
                 <Label htmlFor={`${plan.id}-name`}>Nombre</Label>
@@ -303,6 +358,50 @@ export function PlanesClient({ currency }: { currency: string }) {
           </Card>
         ))}
       </div>
+
+      {planAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmar-borrado-plan-titulo"
+            className="w-full max-w-md rounded-lg border bg-card p-5 shadow-xl"
+          >
+            <h2 id="confirmar-borrado-plan-titulo" className="mb-2 font-semibold">
+              ¿Eliminar el plan {planAEliminar.name}?
+            </h2>
+            <p className="text-sm leading-relaxed text-text-2">
+              Antes de eliminarlo, mueve a otro plan todas las organizaciones que
+              lo tienen asignado. Si quieres impedir nuevas asignaciones sin
+              moverlas ahora, desactiva este plan.
+            </p>
+            {errorBorrado && (
+              <p role="alert" className="mt-3 text-sm text-danger-text">
+                {errorBorrado}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                disabled={borrando === planAEliminar.id}
+                onClick={() => {
+                  setPlanAEliminar(null);
+                  setErrorBorrado(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={borrando === planAEliminar.id}
+                onClick={() => void borrar(planAEliminar)}
+              >
+                {borrando === planAEliminar.id ? "Eliminando…" : "Eliminar plan"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

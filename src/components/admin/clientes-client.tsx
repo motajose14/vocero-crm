@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Copy, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -38,6 +38,23 @@ type Cliente = {
   usage: Uso;
 };
 
+type ClipboardWriter = { writeText: (text: string) => Promise<void> };
+
+/** Copia un texto sin guardarlo ni registrarlo; `false` permite el fallback manual. */
+export async function copiarTextoAlPortapapeles(
+  text: string,
+  clipboard: ClipboardWriter | undefined =
+    typeof navigator === "undefined" ? undefined : navigator.clipboard
+): Promise<boolean> {
+  if (!clipboard) return false;
+  try {
+    await clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** 031 — Lista de clientes del SaaS: plan asignado y uso contra el tope. */
 export function ClientesClient() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -49,6 +66,7 @@ export function ClientesClient() {
   const [nuevo, setNuevo] = useState<{ email: string; password: string } | null>(
     null
   );
+  const [estadoCopia, setEstadoCopia] = useState<"copiando" | "copiado" | "fallo" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
@@ -67,6 +85,7 @@ export function ClientesClient() {
     setCreando(true);
     setError(null);
     setNuevo(null);
+    setEstadoCopia(null);
     const res = await fetch("/api/admin/organizations", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -89,6 +108,14 @@ export function ClientesClient() {
     setDueno("");
     setCorreo("");
     void refetch();
+  }
+
+  async function copiarContrasena() {
+    if (!nuevo) return;
+    setEstadoCopia("copiando");
+    setEstadoCopia(
+      (await copiarTextoAlPortapapeles(nuevo.password)) ? "copiado" : "fallo"
+    );
   }
 
   return (
@@ -136,9 +163,30 @@ export function ClientesClient() {
                 Cliente creado. Entrega esta contraseña al dueño: no vuelve a
                 verse.
               </p>
-              <p className="mt-1 font-mono text-foreground">
-                {nuevo.email} · {nuevo.password}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="font-mono text-foreground">
+                  {nuevo.email} · {nuevo.password}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={estadoCopia === "copiando"}
+                  onClick={() => void copiarContrasena()}
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden />
+                  {estadoCopia === "copiando" ? "Copiando…" : "Copiar contraseña"}
+                </Button>
+              </div>
+              {estadoCopia === "copiado" && (
+                <p role="status" aria-live="polite" className="mt-2 text-sm text-success-text">
+                  Contraseña copiada al portapapeles.
+                </p>
+              )}
+              {estadoCopia === "fallo" && (
+                <p role="alert" className="mt-2 text-sm text-danger-text">
+                  No se pudo copiar. Selecciona la contraseña y cópiala manualmente.
+                </p>
+              )}
             </div>
           )}
           <Button
@@ -172,20 +220,28 @@ export function ClientesClient() {
           <ul className="divide-y divide-border">
             {clientes.map((cliente) => (
               <li key={cliente.id} className="py-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/admin/clientes/${cliente.id}`}
+                      className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    >
+                      {cliente.name}
+                    </Link>
+                    {cliente.plan ? (
+                      <Badge variant={cliente.plan.isFree ? "secondary" : "default"}>
+                        {cliente.plan.name}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">sin plan</Badge>
+                    )}
+                  </div>
                   <Link
                     href={`/admin/clientes/${cliente.id}`}
-                    className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
                   >
-                    {cliente.name}
+                    Ver y editar
                   </Link>
-                  {cliente.plan ? (
-                    <Badge variant={cliente.plan.isFree ? "secondary" : "default"}>
-                      {cliente.plan.name}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">sin plan</Badge>
-                  )}
                 </div>
                 <div className="mt-2">
                   <UsoCliente uso={cliente.usage} limites={cliente.plan?.limits ?? null} />

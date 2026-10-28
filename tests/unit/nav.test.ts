@@ -49,6 +49,20 @@ describe("barra lateral agrupada", () => {
     }
   });
 
+  it("solo owner y admin ven Plan y uso", () => {
+    for (const role of ["owner", "admin"]) {
+      const items = appNavGroups({ role }).flatMap((group) => group.items);
+      expect(items).toContainEqual(expect.objectContaining({
+        href: "/plan-uso",
+        label: "Plan y uso",
+      }));
+    }
+    for (const role of ["member", null, undefined]) {
+      const items = appNavGroups({ role }).flatMap((group) => group.items);
+      expect(items.map((item) => item.href)).not.toContain("/plan-uso");
+    }
+  });
+
   it("solo la Bandeja lleva el contador y Ajustes queda fuera de los grupos", () => {
     const todos = appNavGroups({ agenda: true, role: "owner" }).flatMap((g) => g.items);
     expect(todos.filter((i) => i.badge).map((i) => i.href)).toEqual(["/inbox"]);

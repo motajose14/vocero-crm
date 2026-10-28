@@ -1,17 +1,24 @@
 import { after } from "next/server";
 import { getEnv } from "@/lib/env";
 import {
+  MAX_WEBHOOK_BODY_BYTES,
+  readRequestBodyLimited,
+  RequestBodyTooLargeError,
+} from "@/lib/request-body";
+import {
   isValidSignature,
   isValidWebhookToken,
   type WebhookPayload,
 } from "@/server/inbox/webhook";
 import { processEchoesValue, processMessagesValue } from "@/server/inbox/ingest";
 import { processTemplateStatusValue } from "@/server/whatsapp/template-events";
+import { appSecretForPayload } from "@/server/whatsapp/webhook-secret";
 
 /**
  * Webhook público de WhatsApp (contrato webhook.md).
  * Capa 1: el segmento [webhookToken] debe coincidir (si no → 404 sin efectos).
- * Capa 2: firma x-hub-signature-256 solo si META_APP_SECRET está configurado.
+ * Capa 2: valida la firma contra el App Secret configurado para los números
+ * del payload, o contra META_APP_SECRET como respaldo de la instancia.
  * El POST siempre responde 200 tras validar; el procesamiento va en after().
  */
 export const dynamic = "force-dynamic";
@@ -43,9 +50,20 @@ export async function POST(req: Request, { params }: Params) {
     return new Response(null, { status: 404 });
   }
 
-  const rawBody = await req.text();
+  let rawBody: string;
+  try {
+    rawBody = new TextDecoder().decode(
+      await readRequestBodyLimited(req, MAX_WEBHOOK_BODY_BYTES)
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return new Response(null, { status: 413 });
+    }
+    throw error;
+  }
   const signature = req.headers.get("x-hub-signature-256");
-  if (!isValidSignature(rawBody, signature, env.META_APP_SECRET)) {
+  const appSecret = await appSecretForPayload(rawBody, env.META_APP_SECRET);
+  if (!appSecret || !isValidSignature(rawBody, signature, appSecret)) {
     return new Response(null, { status: 401 });
   }
 

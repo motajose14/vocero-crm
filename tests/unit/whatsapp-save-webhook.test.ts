@@ -23,6 +23,8 @@ const save = vi.hoisted(() => vi.fn(async () => {}));
 const disconnect = vi.hoisted(() => vi.fn(async () => {}));
 const creds = vi.hoisted(() => ({
   current: null as null | {
+    appSecretConfigured?: boolean;
+    appSecret?: string | null;
     wabaId: string;
     phoneNumberId: string;
     token: string;
@@ -60,17 +62,22 @@ vi.mock("@/server/plans/guards", () => ({
   checkCanConnectThisChannel: async () => ({ ok: true }),
 }));
 
-import { DELETE, PUT } from "@/app/api/settings/whatsapp/route";
+import { DELETE, GET as whatsappGet, PUT } from "@/app/api/settings/whatsapp/route";
 import { GET as webhookGet, POST as webhookPost } from "@/app/api/settings/webhook/route";
 
 const URL_FIJA = "https://crm.ejemplo.test/api/webhooks/wa/verify-abc";
 
-const put = () =>
+const put = (appSecret?: string) =>
   PUT(
     new Request("https://crm.ejemplo.test/api/settings/whatsapp", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ wabaId: "111", phoneNumberId: "222", token: "EAAG-token" }),
+      body: JSON.stringify({
+        wabaId: "111",
+        phoneNumberId: "222",
+        token: "EAAG-token",
+        ...(appSecret ? { appSecret } : {}),
+      }),
     })
   );
 
@@ -100,6 +107,30 @@ describe("guardar la conexión registra el webhook", () => {
       displayPhoneNumber: "+52 55 0000 0000",
       webhook: { ok: true, appWithoutWebhook: false },
     });
+  });
+
+  it("GET solo informa si hay App Secret, nunca devuelve el valor", async () => {
+    creds.current = {
+      appSecret: "secreto-que-no-debe-salir",
+      appSecretConfigured: true,
+      wabaId: "111",
+      phoneNumberId: "222",
+      token: "EAAG-token",
+      status: "connected",
+      displayPhoneNumber: null,
+      verifiedName: null,
+    };
+    const res = await whatsappGet();
+    const body = await res.json();
+    expect(body.connection.appSecretConfigured).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("secreto-que-no-debe-salir");
+  });
+
+  it("acepta y guarda el App Secret configurado", async () => {
+    register.mockResolvedValueOnce({ ok: true, appWithoutWebhook: false });
+    const res = await put("app-secret");
+    expect(res.status).toBe(200);
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ appSecret: "app-secret" }));
   });
 
   it("si Meta rechaza el webhook, la conexión queda guardada y se avisa (200)", async () => {

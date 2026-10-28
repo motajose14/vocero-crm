@@ -13,6 +13,7 @@ export type Credentials = {
   verifiedName: string | null;
   status: "connected" | "reconnect_required";
   token: string;
+  appSecretConfigured: boolean;
 };
 
 type Row = typeof schema.metaCredentials.$inferSelect;
@@ -31,6 +32,7 @@ function toCredentials(row: Row): Credentials {
       iv: row.tokenIv,
       tag: row.tokenTag,
     }),
+    appSecretConfigured: Boolean(row.appSecretCipher && row.appSecretIv && row.appSecretTag),
   };
 }
 
@@ -60,6 +62,24 @@ export async function getCredentialsByWabaId(
   return rows[0] ? toCredentials(rows[0]) : null;
 }
 
+export async function getAppSecretByPhoneNumberId(
+  phoneNumberId: string
+): Promise<string | null> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      cipher: schema.metaCredentials.appSecretCipher,
+      iv: schema.metaCredentials.appSecretIv,
+      tag: schema.metaCredentials.appSecretTag,
+    })
+    .from(schema.metaCredentials)
+    .where(eq(schema.metaCredentials.phoneNumberId, phoneNumberId))
+    .limit(1);
+  const row = rows[0];
+  if (!row?.cipher || !row.iv || !row.tag) return null;
+  return decryptSecret({ cipher: row.cipher, iv: row.iv, tag: row.tag });
+}
+
 export async function getCredentialsByOrg(
   organizationId: string
 ): Promise<Credentials | null> {
@@ -77,11 +97,13 @@ export async function saveCredentials(input: {
   wabaId: string;
   phoneNumberId: string;
   token: string;
+  appSecret?: string;
   displayPhoneNumber?: string | null;
   verifiedName?: string | null;
 }): Promise<void> {
   const db = getDb();
   const enc = encryptSecret(input.token);
+  const appSecretEnc = input.appSecret ? encryptSecret(input.appSecret) : null;
   await db
     .insert(schema.metaCredentials)
     .values({
@@ -94,6 +116,9 @@ export async function saveCredentials(input: {
       tokenCipher: enc.cipher,
       tokenIv: enc.iv,
       tokenTag: enc.tag,
+      appSecretCipher: appSecretEnc?.cipher ?? null,
+      appSecretIv: appSecretEnc?.iv ?? null,
+      appSecretTag: appSecretEnc?.tag ?? null,
       status: "connected",
     })
     .onConflictDoUpdate({
@@ -106,6 +131,13 @@ export async function saveCredentials(input: {
         tokenCipher: enc.cipher,
         tokenIv: enc.iv,
         tokenTag: enc.tag,
+        ...(appSecretEnc
+          ? {
+              appSecretCipher: appSecretEnc.cipher,
+              appSecretIv: appSecretEnc.iv,
+              appSecretTag: appSecretEnc.tag,
+            }
+          : {}),
         status: "connected",
         updatedAt: new Date(),
       },

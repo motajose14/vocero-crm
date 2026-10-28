@@ -235,6 +235,7 @@ describe("checkWhatsApp", () => {
     verifiedName: "Ferretería",
     status: "connected",
     token,
+    appSecretConfigured: false,
   });
   const guardada = (token: string) => ({
     organization: "Ferretería El Martillo",

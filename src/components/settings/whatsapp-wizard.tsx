@@ -21,6 +21,7 @@ type Connection = {
   verifiedName: string | null;
   status: "connected" | "reconnect_required";
   tokenLast4: string;
+  appSecretConfigured: boolean;
 };
 
 type WebhookInfo = {
@@ -223,6 +224,10 @@ function ConnectForm({
     existing?.phoneNumberId ?? ""
   );
   const [token, setToken] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [appSecretConfigured, setAppSecretConfigured] = useState(
+    existing?.appSecretConfigured ?? false
+  );
   const [testResult, setTestResult] = useState<
     | { ok: true; display: string }
     | { ok: false; message: string }
@@ -268,7 +273,7 @@ function ConnectForm({
     const res = await fetch("/api/settings/whatsapp", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ wabaId, phoneNumberId, token }),
+      body: JSON.stringify({ wabaId, phoneNumberId, token, appSecret }),
     }).catch(() => null);
     setSaving(false);
     if (!res?.ok) {
@@ -283,6 +288,8 @@ function ConnectForm({
     } | null;
     onRegistration(saved?.webhook ?? null);
     setToken("");
+    setAppSecret("");
+    setAppSecretConfigured(Boolean(appSecret.trim()) || appSecretConfigured);
     setTestResult(null);
     onSaved();
   }
@@ -295,8 +302,8 @@ function ConnectForm({
         </CardTitle>
         <CardDescription>
           Pega las credenciales de WhatsApp Cloud API. El token se valida
-          contra Meta ANTES de guardarse y se almacena cifrado. Al guardar, el
-          webhook se registra en Meta por ti.
+          contra Meta ANTES de guardarse; el token y el App Secret se almacenan
+          cifrados. Al guardar, el webhook se registra en Meta por ti.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -359,6 +366,26 @@ function ConnectForm({
               setTestResult(null);
             }}
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="app-secret">App Secret (opcional)</Label>
+          <Input
+            id="app-secret"
+            type="password"
+            placeholder={
+              appSecretConfigured
+                ? "Configurado — pega uno nuevo para cambiarlo"
+                : "App Secret de tu app de Meta"
+            }
+            value={appSecret}
+            onChange={(e) => setAppSecret(e.target.value)}
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-muted-foreground">
+            {appSecretConfigured && !appSecret
+              ? "Ya hay un App Secret guardado. Dejalo vacío para conservarlo."
+              : "Se guarda cifrado y nunca vuelve a mostrarse."}
+          </p>
         </div>
 
         {testResult && (

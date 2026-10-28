@@ -416,8 +416,9 @@ Embedded Signup. Hay dos formas de obtenerlo:
    **URL del webhook** y el **verify token** que Vocero te muestra, y suscribe
    el campo `messages` (y `message_template_status_update` si usarás
    plantillas). Es una sola vez por app.
-5. Recomendado: agrega `META_APP_SECRET` (App Secret de tu app) a las
-   variables de la instancia para la verificación de firma de cada evento.
+5. Obligatorio: configura `META_APP_SECRET` (App Secret de tu app) en las
+   variables de la instancia. Los webhooks de Meta sin firma válida se rechazan;
+   sin este secreto, WhatsApp, Instagram y Messenger no procesan eventos.
 
 ### Modo agencia (Tech Provider) — para agencias
 
@@ -475,8 +476,8 @@ del cliente se conecta con el **override de callback por WABA**:
 
 > ⚠️ **Seguridad**: la URL del webhook contiene el verify token como segmento
 > secreto — trátala como una contraseña (no la publiques ni la mandes por
-> canales inseguros). En modo directo puedes añadir la capa extra de firma con
-> `META_APP_SECRET`.
+> canales inseguros). Además, configura `META_APP_SECRET`: los webhooks de Meta
+> deben traer una firma válida.
 >
 > ℹ️ **Limitación conocida de Meta**: los eventos de estado de PLANTILLAS
 > (`message_template_status_update`) no siguen el override de callback — van a
@@ -662,7 +663,7 @@ clientes reales.
    conversaciones reales de venta y soporte.
 5. **Datos del cliente en su servidor**: cada negocio aloja su instancia; el
    token va cifrado en reposo y los webhooks se validan por URL secreta y
-   firma opcional.
+   firma HMAC de Meta.
 
 ## FAQ de errores comunes
 

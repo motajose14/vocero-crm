@@ -3,6 +3,10 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import {
+  readStreamLimited,
+  RequestBodyTooLargeError,
+} from "@/lib/request-body";
 import { graphRequest, MetaApiError } from "@/lib/meta/client";
 import {
   getCredentialsByOrg,
@@ -188,10 +192,25 @@ export async function downloadGraphMedia(
       res.status === 404 || res.status === 410
     );
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.byteLength > maxBytes) {
+  const contentLength = res.headers.get("content-length");
+  if (
+    contentLength &&
+    /^\d+$/.test(contentLength) &&
+    Number(contentLength) > maxBytes
+  ) {
     throw new MediaFetchError("El adjunto excede el límite de tamaño", true);
   }
+
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = await readStreamLimited(res.body, maxBytes);
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      throw new MediaFetchError("El adjunto excede el límite de tamaño", true);
+    }
+    throw new MediaFetchError("No se pudo descargar el adjunto");
+  }
+  const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return {
     data: buf,
     mimeType: meta.mime_type ?? res.headers.get("content-type"),

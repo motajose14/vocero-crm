@@ -1,11 +1,23 @@
 import { apiError, withAuth } from "@/lib/api";
+import {
+  readRequestBodyLimited,
+  RequestBodyTooLargeError,
+} from "@/lib/request-body";
 import { getConversation } from "@/server/inbox/queries";
 import { SendError, sendMediaMessage } from "@/server/inbox/send";
-import { MediaValidationError } from "@/server/whatsapp/media";
+import {
+  MEDIA_LIMITS,
+  MediaValidationError,
+  validateOutgoing,
+} from "@/server/whatsapp/media";
 
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
+
+const MAX_MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
+const MAX_MEDIA_UPLOAD_BODY_BYTES =
+  MEDIA_LIMITS.document.maxBytes + MAX_MULTIPART_OVERHEAD_BYTES;
 
 const SEND_ERROR_STATUS: Record<SendError["code"], number> = {
   sandbox_violation: 403,
@@ -31,7 +43,20 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const conv = await getConversation(session.organizationId, id);
   if (!conv) return apiError(404, "not_found", "Conversación no encontrada");
 
-  const form = await req.formData().catch(() => null);
+  let form: FormData | null;
+  try {
+    const body = await readRequestBodyLimited(req, MAX_MEDIA_UPLOAD_BODY_BYTES);
+    form = await new Request(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body,
+    }).formData().catch(() => null);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return apiError(413, "too_large", "La solicitud excede el límite permitido");
+    }
+    throw error;
+  }
   if (!form) {
     return apiError(400, "invalid", "Se esperaba multipart/form-data");
   }
@@ -44,6 +69,19 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
     typeof captionRaw === "string" && captionRaw.trim()
       ? captionRaw.trim().slice(0, 1024)
       : undefined;
+
+  try {
+    validateOutgoing(file.type || "application/octet-stream", file.size);
+  } catch (err) {
+    if (err instanceof MediaValidationError) {
+      return apiError(
+        err.code === "too_large" ? 413 : 415,
+        err.code,
+        err.message
+      );
+    }
+    throw err;
+  }
 
   const data = Buffer.from(await file.arrayBuffer());
 

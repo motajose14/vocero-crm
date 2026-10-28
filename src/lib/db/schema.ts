@@ -550,6 +550,9 @@ export const metaCredentials = pgTable(
     tokenCipher: text("token_cipher").notNull(),
     tokenIv: text("token_iv").notNull(),
     tokenTag: text("token_tag").notNull(),
+    appSecretCipher: text("app_secret_cipher"),
+    appSecretIv: text("app_secret_iv"),
+    appSecretTag: text("app_secret_tag"),
     status: text("status", { enum: ["connected", "reconnect_required"] })
       .notNull()
       .default("connected"),
